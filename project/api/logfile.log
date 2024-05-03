@@ -1,0 +1,26 @@
+2024-05-02 09:12:20,627:INFO:Will watch for changes in these directories: ['C:\\Users\\HomutinnikovaII\\PycharmProjects\\DMCInterface\\project\\api']
+2024-05-02 09:12:20,628:WARNING:"workers" flag is ignored when reloading is enabled.
+2024-05-02 09:12:20,628:INFO:Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+2024-05-02 09:12:20,628:INFO:Started reloader process [1148] using StatReload
+2024-05-02 09:12:21,525:INFO:Started server process [5708]
+2024-05-02 09:12:21,526:INFO:Waiting for application startup.
+2024-05-02 09:12:21,526:INFO:Application startup complete.
+2024-05-02 09:13:12,012:INFO:127.0.0.1:64075 - "GET /add_org/?org_inn=123 HTTP/1.1" 307
+2024-05-02 09:13:12,016:INFO:127.0.0.1:64075 - "GET /add_org?org_inn=123 HTTP/1.1" 405
+2024-05-02 09:13:18,145:INFO:127.0.0.1:64078 - "POST /add_org/?org_inn=123 HTTP/1.1" 307
+2024-05-02 09:13:18,150:INFO:127.0.0.1:64078 - "POST /add_org?org_inn=123 HTTP/1.1" 422
+2024-05-02 09:13:34,965:INFO:127.0.0.1:64080 - "PUT /update_org_keys/?org_inn=123 HTTP/1.1" 307
+2024-05-02 09:13:34,985:INFO:127.0.0.1:64080 - "PUT /update_org_keys?org_inn=123 HTTP/1.1" 200
+2024-05-02 09:13:55,644:INFO:Shutting down
+2024-05-02 09:13:57,845:INFO:Will watch for changes in these directories: ['C:\\Users\\HomutinnikovaII\\PycharmProjects\\DMCInterface\\project\\api']
+2024-05-02 09:13:57,845:WARNING:"workers" flag is ignored when reloading is enabled.
+2024-05-02 09:13:57,845:INFO:Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+2024-05-02 09:13:57,845:INFO:Started reloader process [9732] using StatReload
+2024-05-02 09:13:58,725:INFO:Started server process [2120]
+2024-05-02 09:13:58,726:INFO:Waiting for application startup.
+2024-05-02 09:13:58,726:INFO:Application startup complete.
+2024-05-02 09:14:23,452:WARNING:StatReload detected changes in 'main.py'. Reloading...
+2024-05-02 09:14:24,732:INFO:Shutting down
+2024-05-02 09:14:24,841:INFO:Waiting for application shutdown.
+2024-05-02 09:14:24,841:INFO:Application shutdown complete.
+2024-05-02 09:14:24,841:INFO:Finished server process [2120]

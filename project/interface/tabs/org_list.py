@@ -8,11 +8,13 @@ from project.interface.threads import AddOrgThread
 from project.interface.api_manager import manager
 
 
-class AddOrgTab(QWidget):
+class OrgListTab(QWidget):
     org_added = Signal(dict)
 
-    def __init__(self):
+    def __init__(self, org_list):
         super().__init__()
+
+        self.org_list = org_list
 
         self.layout = QVBoxLayout()
         self.layout.setAlignment(Qt.AlignTop)
@@ -40,19 +42,6 @@ class AddOrgTab(QWidget):
             pat = re.compile(r"^\d{10,12}$")
             if re.fullmatch(pat, inn):
                 return True
-        return False
-
-    @staticmethod
-    def _check_inn_name_exists(inn: str, name: str) -> bool:
-        if not manager.org_cash:
-            manager.get_org_list()  # TODO: refactor
-        for org in manager.org_cash:
-            if name:
-                if org.name != name and org.inn != inn:
-                    return True
-            else:
-                if org.inn != inn:
-                    return True
         return False
 
     def add_org(self) -> None:

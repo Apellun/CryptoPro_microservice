@@ -1,20 +1,19 @@
 import asyncio
-from project.api.db.db import engine, Base
-from project.api.db.models import Organization, Key
-
+from project.api.core.db.db import engine, Base
+from project.api.core.db.models import Organization
 
 organizations = [
         {
             "name": "happy cat",
-            "inn": 123
+            "inn": "1231231231"
         },
         {
             "name": "cry banana cat",
-            "inn": 456
+            "inn": "4564564564"
         },
         {
             "name": "maxwell cat",
-            "inn": 789
+            "inn": "7897897897"
         }
     ]
 
@@ -37,10 +36,10 @@ async def load_fixed_data(organizations, keys):
         for org in organizations:
             stmt = Organization.__table__.insert().values(name=org["name"], inn=org["inn"])
             await session.execute(stmt)
-
-        for key in keys:
-            stmt = Key.__table__.insert().values(key=key)
-            await session.execute(stmt)
+        #
+        # for key in keys:
+        #     stmt = Key.__table__.insert().values(key=key)
+        #     await session.execute(stmt)
 
         await session.commit()
 

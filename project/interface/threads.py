@@ -44,11 +44,11 @@ class AddOrgThread(QRunnable):
             self.signals.error.emit(str(e))
 
 
-class AddOrgKeysThread(QRunnable):
+class UpdateOrgKeysThread(QRunnable):
     finished = Signal(int)
 
     def __init__(self, org_inn, keys):
-        super(AddOrgKeysThread, self).__init__()
+        super(UpdateOrgKeysThread, self).__init__()
         self.org_inn = org_inn
         self.keys = keys
         self.signals = UpdateServerSettingsSignals()
@@ -56,25 +56,7 @@ class AddOrgKeysThread(QRunnable):
     @Slot()
     def run(self):
         try:
-            manager.add_org_keys(self.org_inn, self.keys)
-            self.signals.finished.emit()
-        except Exception as e:
-            self.signals.error.emit(str(e))
-
-
-class DeleteOrgKeysThread(QRunnable):
-    finished = Signal(int)
-
-    def __init__(self, org_inn, keys):
-        super(DeleteOrgKeysThread, self).__init__()
-        self.org_inn = org_inn
-        self.keys = keys
-        self.signals = UpdateServerSettingsSignals()
-
-    @Slot()
-    def run(self):
-        try:
-            manager.delete_org_keys(self.org_inn, self.keys)
+            manager.update_org_keys(self.org_inn, self.keys)
             self.signals.finished.emit()
         except Exception as e:
             self.signals.error.emit(str(e))

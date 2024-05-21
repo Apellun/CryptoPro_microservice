@@ -21,14 +21,18 @@ class MainWindow(QWidget):
         org_list = manager.get_org_list()
 
         self.server_details_tab = ConfigureServerTab()
-        self.org_list_tab = OrgListTab(org_list)
         self.browse_keys_tab = BrowseKeysTab(org_list)
+        self.org_list_tab = OrgListTab(self, org_list)
 
         self.tabs.addTab(self.browse_keys_tab, "Доступные ключи")
+        self.tabs.addTab(self.org_list_tab, "Список организаций")
         self.tabs.addTab(self.server_details_tab, "Настройки сервера")
-        self.tabs.addTab(self.org_list_tab, "Добавить организацию")
 
-        self.org_list_tab.org_added.connect(self.browse_keys_tab._update_org_list)
+        self.org_list_tab.add_org_widget.org_added.connect(self.browse_keys_tab._add_org_to_list)
+        self.org_list_tab.add_org_widget.org_added.connect(self.org_list_tab._on_finished_update)
+
+        self.org_list_tab.org_updated.connect(lambda org_info: self.browse_keys_tab._update_org_in_list(org_info))
+        self.org_list_tab.org_deleted.connect(lambda org_inn: self.browse_keys_tab._delete_org_from_list(org_inn))
 
         self.setMinimumHeight(600)
         screen_geometry = QApplication.primaryScreen().geometry()

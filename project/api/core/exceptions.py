@@ -7,11 +7,16 @@ class CryptoApiError(Exception):
         super().__init__(self.message, self.name)
 
 
-class IntegrityException(CryptoApiError):
-    def __init__(self, details: str = "", message: str = "Ошибка целостности базы"):
+class UniqueConstraintError(CryptoApiError):
+    def __init__(self, details: str = "", message: str = "Объект с подобным значением поля уже существует в базе"):
         super().__init__(message=message, details=details)
 
 
 class DatabaseError(CryptoApiError):
     def __init__(self, details: str = ""):
         super().__init__(details=details)
+
+
+class EntityNotFoundError(CryptoApiError):
+    def __init__(self, details: str = "", message: str = "Объект не найден"):
+        super().__init__(message=message, details=details)

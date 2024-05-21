@@ -5,12 +5,12 @@ from project.interface import exceptions
 
 
 class ApiManager:
-    def __init__(self):
-        self.api_host = "localhost"
-        self.api_port = 8080
+    def __init__(self, host: str, port: int):
+        self.api_host = host
+        self.api_port = port
 
     @staticmethod
-    def _check_response_code(response):#<Response [400]> {"message":"Организация с таким ИНН или именем уже существует в базе [Crypto API]"}
+    def _check_response_code(response: requests.Response) -> Optional[bool]:#<Response [400]> {"message":"Организация с таким ИНН или именем уже существует в базе [Crypto API]"}
         if response.status_code == 200:
             return True
         elif response.status_code == 500:
@@ -20,7 +20,10 @@ class ApiManager:
                 raise exceptions.OrgDataIntegrityError(response.text)
         raise exceptions.ResponseCodeError(response.status_code, response.reason)
 
-    def _send_request(self, endpoint: str, method: str, request_body: Optional[Dict] = None, request_params: Optional[List] = None):
+    def _send_request(self, endpoint: str, method: str,
+                      request_body: Optional[Dict] = None,
+                      request_params: Optional[List] = None) \
+            -> requests.Response:
         url = f"http://{self.api_host}:{self.api_port}{endpoint}"
 
         if request_params:
@@ -58,20 +61,21 @@ class ApiManager:
                 except Exception:
                     raise exceptions.EmptyResponseError
 
-    def get_org_list(self):
+    def get_org_list(self) -> requests.Response:
         return self._send_request(
             endpoint="/organizations/get_org_list",
             method="GET"
         )
 
-    def get_org_keys(self, org_inn: str):
+    def get_org_keys(self, org_inn: str) -> requests.Response:
         return self._send_request(
             request_params=[{"name": "org_inn", "value": org_inn}],
             endpoint="/keys/get_org_keys",
             method="GET"
         )
 
-    def update_server_settings(self, server_host: str, server_port: str):
+    def update_server_settings(self, server_host: str, server_port: str)\
+            -> requests.Response:
         return self._send_request(
             request_body={
                 "host": server_host,
@@ -81,7 +85,8 @@ class ApiManager:
             method="PUT"
         )
 
-    def add_org(self, org_inn: str, org_name: Optional[str] = None):
+    def add_org(self, org_inn: str, org_name: Optional[str] = None)\
+            -> requests.Response:
         return self._send_request(
             request_body={
                 "inn": org_inn,
@@ -91,7 +96,26 @@ class ApiManager:
             method="POST"
         )
 
-    def update_org_keys(self, org_inn: str, new_keys: List[Optional[object]] = None):
+    def update_org(self, old_inn: str, new_org_details: Dict) -> requests.Response:
+        return self._send_request(
+            request_params=[{"name": "old_inn", "value": old_inn}],
+            request_body={
+                "inn": new_org_details["inn"],
+                "name": new_org_details["name"]
+            },
+            endpoint="/organizations/update_org",
+            method="PUT"
+        )
+
+    def delete_org(self, org_inn: str) -> requests.Response:
+        return self._send_request(
+            request_params=[{"name": "org_inn", "value": org_inn}],
+            endpoint="/organizations/delete_org",
+            method="DELETE"
+        )
+
+    def update_org_keys(self, org_inn: str, new_keys: List[Optional[object]] = None)\
+            -> requests.Response:
         return self._send_request(
             request_params=[
                 {"name": "org_inn",
@@ -105,4 +129,4 @@ class ApiManager:
         )
 
 
-manager = ApiManager() #TODO: pass api address
+manager = ApiManager("localhost", 8080)

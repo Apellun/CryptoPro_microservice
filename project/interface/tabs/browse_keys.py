@@ -1,13 +1,13 @@
-from typing import Dict
+from typing import Dict, List
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QComboBox,
     QPushButton, QMessageBox, QHBoxLayout,
-    QScrollArea, QSizePolicy, QCheckBox, QLayout
+    QScrollArea, QSizePolicy, QCheckBox
 )
 from PySide6.QtCore import QThreadPool, Qt
-from project.interface.threads import UpdateOrgKeysThread, GetOrgKeysThread
+from project.interface.utils.threads import UpdateOrgKeysThread, GetOrgKeysThread
 from project.interface.api_manager import manager
-from project.interface.utils.popups import InfoPopup
+from project.interface.dialogs.popups import InfoPopup
 from project.utils.csp.win_csp import WinCspManager
 from project.interface.utils import mock_csp
 
@@ -24,13 +24,13 @@ class KeyItemWidget(QWidget):
 
         self.scroll_content = QWidget()
         self.scroll_content_layout = QVBoxLayout(self.scroll_content)
-        self.scroll_content_layout.addStretch(1)
+        self.scroll_content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.scroll_area.setWidget(self.scroll_content)
         self.layout.addWidget(self.scroll_area)
 
         self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.MinimumExpanding)
-        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
 
 
 class BrowseKeysTab(QWidget):
@@ -85,25 +85,29 @@ class BrowseKeysTab(QWidget):
                 item.widget().deleteLater()
 
         for key in self.keys_list:
-            key_widget = QWidget()
-            key_layout = QHBoxLayout()
-            key_layout.setContentsMargins(1, 1, 1, 1)
-            key_layout.setStretch(0, 0)
+            container_widget = QWidget()
+            key_layout = QHBoxLayout(container_widget)
+            key_layout.setContentsMargins(0, 0, 0, 0)
 
             checkbox = QCheckBox()
-            key_layout.addWidget(checkbox)
 
-            label = QLabel()
+            label = QLabel(str(key))
             label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             label.setWordWrap(True)
-            label.setText(str(key))
 
+            checkbox.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            checkbox.setFixedHeight(checkbox.sizeHint().height())
+
+            label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            label.setFixedHeight(label.sizeHint().height())
+
+            key_layout.addWidget(checkbox)
             key_layout.addWidget(label, stretch=1)
 
-            key_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            container_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            container_widget.setFixedHeight(label.sizeHint().height())
 
-            key_widget.setLayout(key_layout)
-            self.browse_keys_list.scroll_content_layout.addWidget(key_widget)
+            self.browse_keys_list.scroll_content_layout.addWidget(container_widget)
 
     def _get_org_list(self) -> None:
         try:
@@ -116,12 +120,26 @@ class BrowseKeysTab(QWidget):
         for org in self.org_list:
             self.inn_selection.addItem(f"{org["inn"]} ({org["name"]})")
 
-    def _update_org_list(self, new_org: Dict) -> None:
+    def _add_org_to_list(self, new_org: Dict) -> None:
         self.org_list.append(new_org)
-        org_str = f"{new_org['org_inn']}"
-        if new_org['org_name']:
-            org_str += f" ({new_org['org_name']})"
-        self.inn_selection.addItem(f"{new_org['org_inn']}")
+        org_str = f"{new_org['inn']}"
+        if new_org['name']:
+            org_str += f" ({new_org['name']})"
+        self.inn_selection.addItem(org_str)
+
+    def _delete_org_from_list(self, org_inn: str) -> None:
+        item_count = self.inn_selection.count()
+        for index in range(item_count):
+            item_text = self.inn_selection.itemText(index)
+            if item_text.startswith(org_inn):
+                self.inn_selection.removeItem(index)
+
+    def _update_org_in_list(self, org_info: List) -> None: #TODO: better typing
+        item_count = self.inn_selection.count()
+        for index in range(item_count):
+            item_text = self.inn_selection.itemText(index)
+            if item_text.startswith(org_info[0]["inn"]):
+                self.inn_selection.setItemText(index, f"{org_info[1]["inn"]} ({org_info[1]["name"]})")
 
     def _on_update_checked_keys(self, keys):
         if not self.keys_list:

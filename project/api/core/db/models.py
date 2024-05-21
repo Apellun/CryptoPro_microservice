@@ -17,7 +17,7 @@ class Organization(Base):
     __tablename__ = "organization"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String, unique=True)
+    name: Mapped[str] = mapped_column(String, unique=True, nullable=True)
     inn: Mapped[str] = mapped_column(String, unique=True)
 
     keys: Mapped[List["Key"]] = relationship(

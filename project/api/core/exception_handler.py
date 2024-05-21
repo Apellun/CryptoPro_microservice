@@ -17,7 +17,7 @@ def create_exception_handler(status_code: int, initial_detail: str):
         if exc.details:
             detail["details"] = exc.details
 
-        logging.exception(exc) #TODO: check if saves all necessary info
+        logging.exception(exc)
 
         return JSONResponse(
             status_code=status_code, content={

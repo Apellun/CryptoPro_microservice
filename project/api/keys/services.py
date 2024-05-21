@@ -5,6 +5,7 @@ from project.api.core.db.models import Key
 from project.api.core.cache import api_cache
 from project.api.keys.dao import keys_dao
 from project.api.organizations.dao import organizations_dao
+from project.api.organizations.schemas import KeyGet
 
 
 class KeysServices:
@@ -17,7 +18,7 @@ class KeysServices:
         api_cache.add_to_key_cache(org_inn, keys)
         return keys
 
-    async def update_org_keys(self, org_inn: str, keys: object, db: AsyncSession):
+    async def update_org_keys(self, org_inn: str, keys: KeyGet, db: AsyncSession):
         thumbprints = keys.thumbprints
         org = await organizations_dao.get_org(org_inn, db)
         org_keys = org.keys

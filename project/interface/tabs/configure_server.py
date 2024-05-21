@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QLabel, QPushButton, QMessageBox
 )
 from PySide6.QtCore import Qt, QThreadPool
-from project.interface.threads import UpdateServerSettingsThread
+from project.interface.utils.threads import UpdateServerSettingsThread
 
 
 class ConfigureServerTab(QWidget):

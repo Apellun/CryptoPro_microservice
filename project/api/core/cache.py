@@ -28,9 +28,15 @@ class ApiCache:
 
     def delete_org_from_cache(self, org_inn: str):
         if self.org_cache:
-            del self.org_cache[org_inn]
+            try:
+                del self.org_cache[org_inn]
+            except KeyError:
+                pass
         if self.key_cache:
-            del self.key_cache[org_inn]
+            try:
+                del self.key_cache[org_inn]
+            except KeyError:
+                pass
 
 
 api_cache = ApiCache()

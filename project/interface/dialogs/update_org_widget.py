@@ -37,6 +37,8 @@ class UpdateOrgWidget(QWidget):
         self.add_org_button.clicked.connect(self.update_org)
         self.layout.addWidget(self.add_org_button)
 
+        self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+
         self.threadpool = QThreadPool()
 
     @staticmethod
@@ -69,7 +71,7 @@ class UpdateOrgWidget(QWidget):
         )
 
         thread.signals.progress_popup.connect(lambda message: self.parent.progress_dialog.update_progress(message))
-        thread.signals.finished_popup.connect(lambda message: self.parent.update_finished.update_progress(message))
+        thread.signals.finished_popup.connect(lambda message: self.parent.progress_dialog.update_finished(message))
         thread.signals.finished.connect(self._on_finished_update)
         thread.signals.error_popup.connect(lambda error: self.parent.progress_dialog.update_error(message=error))
         self.threadpool.start(thread)

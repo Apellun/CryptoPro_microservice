@@ -35,7 +35,7 @@ class OrganizationsServices:
         return result
 
     async def delete_org(self, org_inn: str, db: AsyncSession) -> None:
-        await organizations_dao._delete_org(org_inn, db)
+        await organizations_dao.delete_org(org_inn, db)
         api_cache.delete_org_from_cache(org_inn)
 
 

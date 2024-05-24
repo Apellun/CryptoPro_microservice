@@ -70,7 +70,7 @@ class DeleteOrgThread(QRunnable):
     def run(self) -> None:
         try:
             self.signals.progress_popup.emit("Сохраняем настройки...")
-            manager._delete_org(self.org_inn)
+            manager.delete_org(self.org_inn)
             self.signals.finished_popup.emit("Настройки успешно сохранены")
             self.signals.finished.emit()
         except Exception as error:

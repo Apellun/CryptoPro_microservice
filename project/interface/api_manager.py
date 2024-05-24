@@ -20,20 +20,10 @@ class ApiManager:
                 raise exceptions.OrgDataIntegrityError(response.text)
         raise exceptions.ResponseCodeError(response.status_code, response.reason)
 
-    def _send_request(self, endpoint: str, method: str,
-                      request_body: Optional[Dict] = None,
-                      request_params: Optional[List] = None) \
+    def _send_request(self, method: str, endpoint: str = None,
+                      request_body: Optional[Dict] = None)\
             -> requests.Response:
-        url = f"http://{self.api_host}:{self.api_port}{endpoint}"
-
-        if request_params:
-            url += "/?"
-            num_params = len(request_params)
-            for i in range(num_params):
-                url += f"{request_params[i]['name']}={request_params[i]['value']}"
-                if i < num_params - 1:
-                    url += "&"
-
+        url = f"http://{self.api_host}:{self.api_port}/{endpoint}"
         headers = {
             'Content-Type': 'application/json'
         }
@@ -63,14 +53,13 @@ class ApiManager:
 
     def get_org_list(self) -> requests.Response:
         return self._send_request(
-            endpoint="/organizations/get_org_list",
+            endpoint="organizations",
             method="GET"
         )
 
     def get_org_keys(self, org_inn: str) -> requests.Response:
         return self._send_request(
-            request_params=[{"name": "org_inn", "value": org_inn}],
-            endpoint="/keys/get_org_keys",
+            endpoint=f"keys/{org_inn}",
             method="GET"
         )
 
@@ -81,7 +70,7 @@ class ApiManager:
                 "host": server_host,
                 "port": int(server_port)
             },
-            endpoint="/server_settings/update_server_settings",
+            endpoint="server_settings/",
             method="PUT"
         )
 
@@ -92,41 +81,35 @@ class ApiManager:
                 "inn": org_inn,
                 "name": org_name
             },
-            endpoint="/organizations/add_org",
+            endpoint="organizations/",
             method="POST"
         )
 
     def update_org(self, old_inn: str, new_org_details: Dict) -> requests.Response:
         return self._send_request(
-            request_params=[{"name": "old_inn", "value": old_inn}],
             request_body={
                 "inn": new_org_details["inn"],
                 "name": new_org_details["name"]
             },
-            endpoint="/organizations/update_org",
+            endpoint=f"organizations/{old_inn}",
             method="PUT"
         )
 
     def delete_org(self, org_inn: str) -> requests.Response:
         return self._send_request(
-            request_params=[{"name": "org_inn", "value": org_inn}],
-            endpoint="/organizations/delete_org",
+            endpoint=f"organizations/{org_inn}",
             method="DELETE"
         )
 
     def update_org_keys(self, org_inn: str, new_keys: List[Optional[object]] = None)\
             -> requests.Response:
         return self._send_request(
-            request_params=[
-                {"name": "org_inn",
-                 "value": org_inn}
-            ],
             request_body={
-                "thumbprints": [key.Thumbprint for key in new_keys]
+                "thumbprints": new_keys
             },
-            endpoint="/keys/update_org_keys",
+            endpoint=f"keys/{org_inn}",
             method="PUT"
         )
 
 
-manager = ApiManager("localhost", 8080)
+manager = ApiManager("localhost", 9080)

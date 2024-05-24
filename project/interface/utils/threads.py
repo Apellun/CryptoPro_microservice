@@ -3,26 +3,27 @@ from PySide6.QtCore import QRunnable, Signal, Slot, QObject
 from project.interface.api_manager import manager
 
 
-class UpdateServerSettingsSignals(QObject):
+class BaseSignals(QObject):
+    started = Signal()
     finished = Signal()
-    error = Signal(str)
+    progress_popup = Signal(str)
+    finished_popup = Signal(str)
+    error_popup = Signal(str)
     result = Signal(list)
 
 
-class UpdateServerSettingsThread(QRunnable):
-    def __init__(self, host: str, port: int):
-        super(UpdateServerSettingsThread, self).__init__()
-        self.host = host
-        self.port = port
-        self.signals = UpdateServerSettingsSignals()
+class GetOrgListThread(QRunnable):
+    def __init__(self):
+        super(GetOrgListThread, self).__init__()
+        self.signals = BaseSignals()
 
     @Slot()
-    def run(self) -> None:
+    def run(self):
         try:
-            manager.update_server_settings(self.host, self.port)
-            self.signals.finished.emit()
-        except Exception as e:
-            self.signals.error.emit(str(e))
+            result = manager.get_org_list()
+            self.signals.result.emit(result)
+        except Exception as error:
+            self.signals.error_popup.emit(str(error))
 
 
 class AddOrgThread(QRunnable):
@@ -30,15 +31,15 @@ class AddOrgThread(QRunnable):
         super(AddOrgThread, self).__init__()
         self.org_inn = org_inn
         self.org_name = org_name
-        self.signals = UpdateServerSettingsSignals()
+        self.signals = BaseSignals()
 
     @Slot()
     def run(self) -> None:
         try:
             manager.add_org(self.org_inn, self.org_name)
             self.signals.finished.emit()
-        except Exception as e:
-            self.signals.error.emit(str(e))
+        except Exception as error:
+            self.signals.error_popup.emit(str(error))
 
 
 class UpdateOrgThread(QRunnable):
@@ -46,15 +47,49 @@ class UpdateOrgThread(QRunnable):
         super(UpdateOrgThread, self).__init__()
         self.old_inn = old_inn
         self.new_org_details = new_org_details
-        self.signals = UpdateServerSettingsSignals()
+        self.signals = BaseSignals()
 
     @Slot()
     def run(self) -> None:
         try:
+            self.signals.progress_popup.emit("Сохраняем настройки...") #TODO: separate messages
             manager.update_org(self.old_inn, self.new_org_details)
             self.signals.finished.emit()
-        except Exception as e:
-            self.signals.error.emit(str(e))
+            self.signals.finished_popup.emit("Настройки успешно сохранены")
+        except Exception as error:
+            self.signals.error_popup.emit(str(error))
+
+
+class DeleteOrgThread(QRunnable):
+    def __init__(self, org_inn: str):
+        super(DeleteOrgThread, self).__init__()
+        self.org_inn = org_inn
+        self.signals = BaseSignals()
+
+    @Slot()
+    def run(self) -> None:
+        try:
+            self.signals.progress_popup.emit("Сохраняем настройки...")
+            manager._delete_org(self.org_inn)
+            self.signals.finished_popup.emit("Настройки успешно сохранены")
+            self.signals.finished.emit()
+        except Exception as error:
+            self.signals.error_popup.emit(str(error))
+
+
+class GetOrgKeysThread(QRunnable):
+    def __init__(self, org_inn):
+        super(GetOrgKeysThread, self).__init__()
+        self.org_inn = org_inn
+        self.signals = BaseSignals()
+
+    @Slot()
+    def run(self):
+        try:
+            result = manager.get_org_keys(self.org_inn)
+            self.signals.result.emit(result)
+        except Exception as error:
+            self.signals.error_popup.emit(str(error))
 
 
 class UpdateOrgKeysThread(QRunnable):
@@ -62,56 +97,30 @@ class UpdateOrgKeysThread(QRunnable):
         super(UpdateOrgKeysThread, self).__init__()
         self.org_inn = org_inn
         self.keys = keys
-        self.signals = UpdateServerSettingsSignals()
+        self.signals = BaseSignals()
 
     @Slot()
     def run(self) -> None:
         try:
+            self.signals.progress_popup.emit("Сохраняем настройки...")
             manager.update_org_keys(self.org_inn, self.keys)
             self.signals.finished.emit()
-        except Exception as e:
-            self.signals.error.emit(str(e))
+            self.signals.finished_popup.emit("Настройки успешно сохранены")
+        except Exception as error:
+            self.signals.error_popup.emit(str(error))
 
 
-class DeleteOrgThread(QRunnable):
-    def __init__(self, org_inn: str):
-        super(DeleteOrgThread, self).__init__()
-        self.org_inn = org_inn
-        self.signals = UpdateServerSettingsSignals()
+class UpdateServerSettingsThread(QRunnable):
+    def __init__(self, host: str, port: int):
+        super(UpdateServerSettingsThread, self).__init__()
+        self.host = host
+        self.port = port
+        self.signals = BaseSignals()
 
     @Slot()
     def run(self) -> None:
         try:
-            manager.delete_org(self.org_inn)
+            manager.update_server_settings(self.host, self.port)
             self.signals.finished.emit()
-        except Exception as e:
-            self.signals.error.emit(str(e))
-
-
-class GetOrgKeysThread(QRunnable):
-    def __init__(self, org_inn):
-        super(GetOrgKeysThread, self).__init__()
-        self.org_inn = org_inn
-        self.signals = UpdateServerSettingsSignals()
-
-    @Slot()
-    def run(self):
-        try:
-            result = manager.get_org_keys(self.org_inn)
-            self.signals.result.emit(result)
-        except Exception as e:
-            self.signals.error.emit(str(e))
-
-
-class GetOrgListThread(QRunnable):
-    def __init__(self):
-        super(GetOrgListThread, self).__init__()
-        self.signals = UpdateServerSettingsSignals()
-
-    @Slot()
-    def run(self):
-        try:
-            result = manager.get_org_list()
-            self.signals.result.emit(result)
-        except Exception as e:
-            self.signals.error.emit(str(e))
+        except Exception as error:
+            self.signals.error_popup.emit(str(error))

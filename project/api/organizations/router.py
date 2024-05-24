@@ -32,6 +32,6 @@ async def update_org(old_inn: str, new_org_details: OrganizationUpdate, db: Asyn
     return result
 
 
-@organizations_router.delete('/delete_org', status_code=200)
+@organizations_router.delete('/{org_inn}', status_code=200)
 async def delete_org(org_inn: str, db: AsyncSession = Depends(get_db)):
-    await organizations_services.delete_org(org_inn=org_inn, db=db)
+    await organizations_services._delete_org(org_inn=org_inn, db=db)

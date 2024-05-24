@@ -34,12 +34,22 @@ class AddOrgWidget(QWidget):
         self.threadpool = QThreadPool()
 
     @staticmethod
-    def _validate_inn(inn: str):
+    def _validate_inn(inn: str) -> bool:
         if inn.isnumeric():
             pat = re.compile(r"^\d{10,12}$")
             if re.fullmatch(pat, inn):
                 return True
         return False
+
+    def _on_update_finished(self) -> None:
+        QMessageBox.information(self, "Успешно", "ИНН успешно добавлен.")
+        self.org_added.emit(
+            {"name": self.org_name_edit.text(),
+             "inn": self.inn_edit.text()}
+        )
+
+    def _on_update_error(self, message: str) -> None:
+        QMessageBox.warning(self, "Ошибка", message)
 
     def add_org(self) -> None:
         org_name = self.org_name_edit.text()
@@ -53,16 +63,6 @@ class AddOrgWidget(QWidget):
             return
 
         thread = AddOrgThread(org_inn, org_name)
-        thread.signals.finished.connect(self.on_update_finished)
-        thread.signals.error.connect(self.on_update_error)
+        thread.signals.finished.connect(self._on_update_finished)
+        thread.signals.error_popup.connect(lambda error: self._on_update_error(error))
         self.threadpool.start(thread)
-
-    def on_update_finished(self) -> None:
-        QMessageBox.information(self, "Успешно", "ИНН успешно добавлен.")
-        self.org_added.emit(
-            {"name": self.org_name_edit.text(),
-             "inn": self.inn_edit.text()}
-        )
-
-    def on_update_error(self, message: str) -> None:
-        QMessageBox.warning(self, "Ошибка", message)

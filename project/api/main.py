@@ -19,7 +19,7 @@ app.include_router(server_router, prefix="/server_settings")
 app.add_exception_handler(
     exc_class_or_status_code=UniqueConstraintError,
     handler=create_exception_handler(
-        status.HTTP_400_BAD_REQUEST, "Внутренняя ошибка сервера"
+        status.HTTP_400_BAD_REQUEST, "Некорректный запрос"
     ),
 )
 app.add_exception_handler(

@@ -10,11 +10,12 @@ from project.interface.utils.threads import UpdateOrgThread
 class UpdateOrgWidget(QWidget):
     org_updated = Signal(dict)
 
-    def __init__(self, org_inn, org_name, widget):
+    def __init__(self, org_inn, org_name, widget, parent=None):
         super().__init__()
         self.org_inn = org_inn
         self.org_name = org_name
         self.widget = widget
+        self.parent = parent
 
         self.layout = QVBoxLayout()
         self.layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -46,6 +47,12 @@ class UpdateOrgWidget(QWidget):
                 return True
         return False
 
+    def _on_finished_update(self) -> None:
+        self.org_updated.emit(
+            {"name": self.org_name_edit.text(),
+             "inn": self.inn_edit.text()}
+        )
+
     def update_org(self) -> None:
         org_name = self.org_name_edit.text()
         org_inn = self.inn_edit.text()
@@ -55,21 +62,14 @@ class UpdateOrgWidget(QWidget):
                 QMessageBox.warning(self, "Ошибка","Некорерктный ИНН, проверьте правильность заполнения.")
                 return
 
-        thread = UpdateOrgThread( #TODO: refactor results signal for the widget?
+        thread = UpdateOrgThread(
             self.org_inn,
             {"inn": org_inn,
              "name": org_name}
         )
-        thread.signals.finished.connect(self.on_update_finished)
-        thread.signals.error.connect(self.on_update_error)
+
+        thread.signals.progress_popup.connect(lambda message: self.parent.progress_dialog.update_progress(message))
+        thread.signals.finished_popup.connect(lambda message: self.parent.update_finished.update_progress(message))
+        thread.signals.finished.connect(self._on_finished_update)
+        thread.signals.error_popup.connect(lambda error: self.parent.progress_dialog.update_error(message=error))
         self.threadpool.start(thread)
-
-    def on_update_finished(self) -> None:
-        QMessageBox.information(self, "Успешно", "Данные организации успешно изменены.")
-        self.org_updated.emit(
-            {"name": self.org_name_edit.text(),
-             "inn": self.inn_edit.text()}
-        )
-
-    def on_update_error(self, message: str) -> None:
-        QMessageBox.warning(self, "Ошибка", message)

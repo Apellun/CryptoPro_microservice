@@ -6,14 +6,17 @@ from PySide6 import QtCore
 
 
 class InfoPopup(QDialog):
-    def __init__(self, text, parent=None):
+    def __init__(self, text=None, parent=None):
         super().__init__(parent)
 
-        layout = QVBoxLayout(self)
-        message_label = QLabel(text)
-        layout.addWidget(message_label)
+        self.layout = QVBoxLayout(self)
+        self.message_label = QLabel(text)
+        self.layout.addWidget(self.message_label)
 
         self.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint, True)
+
+    def set_text(self, text: str) -> None:
+        self.message_label.setText(text)
 
 
 class ConfirmationPopup(QDialog):

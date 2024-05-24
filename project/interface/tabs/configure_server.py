@@ -43,7 +43,7 @@ class ConfigureServerTab(QWidget):
 
         thread = UpdateServerSettingsThread(host, port)
         thread.signals.finished.connect(self.on_update_finished)
-        thread.signals.error.connect(self.on_update_error)
+        thread.signals.error_popup.connect(self.on_update_error)
         self.threadpool.start(thread)
 
     def on_update_finished(self) -> None:

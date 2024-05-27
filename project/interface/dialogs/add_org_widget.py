@@ -42,10 +42,12 @@ class AddOrgWidget(QWidget):
         return False
 
     def _on_update_finished(self) -> None:
-        QMessageBox.information(self, "Успешно", "ИНН успешно добавлен.")
+        QMessageBox.information(self, "Успешно", "Организация успешно добавлена.")
         self.org_added.emit(
-            {"name": self.org_name_edit.text(),
-             "inn": self.inn_edit.text()}
+            {
+                "name": self.org_name_edit.text(),
+                "inn": self.inn_edit.text()
+            }
         )
 
     def _on_update_error(self, message: str) -> None:

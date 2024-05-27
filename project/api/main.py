@@ -1,7 +1,7 @@
 import uvicorn
 from fastapi import FastAPI, status
 from project.api.core.exceptions import UniqueConstraintError, DatabaseError, EntityNotFoundError
-from keys.router import keys_router
+from organizations_keys.router import orgs_keys_router
 from organizations.router import organizations_router
 from server_settings.router import server_router
 from project.api.config import cwd
@@ -11,7 +11,7 @@ from project.api.core.exception_handler import create_exception_handler
 app = FastAPI(
     title="Crypto API"
 )
-app.include_router(keys_router, prefix="/keys")
+app.include_router(orgs_keys_router, prefix="/organizations_keys")
 app.include_router(organizations_router, prefix="/organizations")
 app.include_router(server_router, prefix="/server_settings")
 

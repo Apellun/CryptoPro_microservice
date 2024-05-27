@@ -2,7 +2,10 @@ from fastapi import APIRouter, Depends
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from project.api.core.db.db import get_db
-from project.api.organizations.schemas import OrganizationRead, OrganizationCreate, OrganizationUpdate
+from project.api.organizations.schemas import (
+    OrganizationRead, OrganizationCreate, OrganizationUpdate,
+    OrganizationKeysUpdate
+)
 from project.api.organizations.services import organizations_services
 
 organizations_router = APIRouter()
@@ -27,8 +30,14 @@ async def add_org(organization: OrganizationCreate, db: AsyncSession = Depends(g
 
 
 @organizations_router.put('/{old_inn}', status_code=200, response_model=Optional[OrganizationRead])
-async def update_org(old_inn: str, new_org_details: OrganizationUpdate, db: AsyncSession = Depends(get_db)):
-    result = await organizations_services.update_org(old_inn=old_inn, new_org_details=new_org_details, db=db)
+async def update_org(old_inn: str, new_org_keys: OrganizationUpdate, db: AsyncSession = Depends(get_db)):
+    result = await organizations_services.update_org(old_inn=old_inn, new_org_keys=new_org_keys, db=db)
+    return result
+
+
+@organizations_router.patch('/{org_inn}', status_code=200, response_model=OrganizationRead)
+async def update_org_keys(org_inn: str, new_org_keys: OrganizationKeysUpdate, db: AsyncSession = Depends(get_db)):
+    result = await organizations_services.update_org_keys(org_inn=org_inn, new_org_keys=new_org_keys, db=db)
     return result
 
 

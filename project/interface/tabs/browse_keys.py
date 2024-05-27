@@ -9,6 +9,7 @@ from project.interface.utils.threads import UpdateOrgKeysThread, GetOrgKeysThrea
 from project.interface.dialogs.progress_dialog import ProgressDialog
 from project.utils.csp.win_csp import WinCspManager
 from project.interface.utils import mock_csp
+from project.interface.api_manager import manager
 
 
 class KeyItemWidget(QWidget):
@@ -38,6 +39,7 @@ class BrowseKeysTab(QWidget):
         super().__init__()
 
         self.org_list = org_list
+        self.org_key_list_cache = manager.get_all_orgs_keys()
         self.keys = None #immutable, objects
         self._checked_keys = None #mutable, string reprs
         self._unchecked_keys = None #mutable, string reprs
@@ -53,9 +55,9 @@ class BrowseKeysTab(QWidget):
         self.layout.addWidget(self.inn_selection)
         self.inn_selection.currentIndexChanged.connect(self._set_checked_keys)
 
-        self.browse_keys_label = QLabel("Все ключи:")
+        self.browse_keys_label = QLabel("Доступные ключи:")
 
-        self.refresh_keys_button = QPushButton("Обновить список ключей")
+        self.refresh_keys_button = QPushButton("Обновить список доступных ключей")
         self.refresh_keys_button.clicked.connect(self._set_checked_keys)
 
         line_layout = QHBoxLayout()
@@ -66,7 +68,7 @@ class BrowseKeysTab(QWidget):
         self.browse_keys_list = KeyItemWidget(self)
         self.layout.addWidget(self.browse_keys_list)
 
-        self.bind_key_button = QPushButton("Использовать ключи для организации")
+        self.bind_key_button = QPushButton("Использовать выбранные ключи для организации")
         self.bind_key_button.clicked.connect(self.update_org_keys)
         self.layout.addWidget(self.bind_key_button)
 
@@ -153,10 +155,11 @@ class BrowseKeysTab(QWidget):
     def _set_checked_keys(self) -> None:
         selected_org_inn = self._get_current_org_inn()
 
-        thread = GetOrgKeysThread(selected_org_inn)
-        thread.signals.error_popup.connect(lambda error: self.progress_dialog.update_error(message=error))
-        thread.signals.result.connect(lambda keys: self._render_checked_keys(keys))
-        self.threadpool.start(thread)
+        # thread = GetOrgKeysThread(selected_org_inn)
+        # thread.signals.error_popup.connect(lambda error: self.progress_dialog.update_error(message=error))
+        # thread.signals.result.connect(lambda keys: self._render_checked_keys(keys))
+        # self.threadpool.start(thread)
+        self._render_checked_keys(self.org_key_list_cache)
 
     def _update_key_widget(self, index: int, key: str, checked: bool = False) -> None:
         container_widget = self.browse_keys_list.scroll_content_layout.itemAt(index).widget()
@@ -219,9 +222,9 @@ class BrowseKeysTab(QWidget):
             if item_text.startswith(org_inn):
                 self.inn_selection.removeItem(index)
 
-    def _update_org_in_list(self, org_info: tuple[Dict[str, str], Dict[str, str]]) -> None:
+    def _update_org_in_list(self, to_update_info: Dict[str, str]) -> None:
         item_count = self.inn_selection.count()
         for index in range(item_count):
             item_text = self.inn_selection.itemText(index)
-            if item_text.startswith(org_info[0]["inn"]):
-                self.inn_selection.setItemText(index, f"{org_info[1]["inn"]} ({org_info[1]["name"]})")
+            if item_text.startswith(to_update_info["previous_org"]["inn"]):
+                self.inn_selection.setItemText(index, f"{to_update_info["updated_org"]["inn"]} ({to_update_info["updated_org"]["name"]})")

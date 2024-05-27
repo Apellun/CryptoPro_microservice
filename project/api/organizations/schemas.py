@@ -7,7 +7,7 @@ class OrganizationRead(BaseAPIModel):
     id: int
     inn: str
     name: Optional[str] = None
-    keys: Optional[List[KeyGet]] = None
+    keys: List[Optional[KeyGet]]
 
 
 class OrganizationCreate(BaseAPIModel):
@@ -20,3 +20,7 @@ class OrganizationUpdate(BaseAPIModel):
     inn: Optional[str] = None
     id: Optional[int] = None
     name: Optional[str] = None
+
+
+class OrganizationKeysUpdate(BaseAPIModel):
+    keys: List[str]

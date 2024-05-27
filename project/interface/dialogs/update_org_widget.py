@@ -51,8 +51,13 @@ class UpdateOrgWidget(QWidget):
 
     def _on_finished_update(self) -> None:
         self.org_updated.emit(
-            {"name": self.org_name_edit.text(),
-             "inn": self.inn_edit.text()}
+            {
+            "updated_org": {"name": self.org_name_edit.text(),
+                            "inn": self.inn_edit.text()},
+            "previous_org": {"name": self.org_name,
+                            "inn": self.org_inn},
+            "widget": self.widget
+            }
         )
 
     def update_org(self) -> None:
@@ -70,8 +75,14 @@ class UpdateOrgWidget(QWidget):
              "name": org_name}
         )
 
-        thread.signals.progress_popup.connect(lambda message: self.parent.progress_dialog.update_progress(message))
-        thread.signals.finished_popup.connect(lambda message: self.parent.progress_dialog.update_finished(message))
+        thread.signals.progress_popup.connect(
+            lambda message: self.parent.progress_dialog.update_progress(message=message)
+        )
+        thread.signals.finished_popup.connect(
+            self.parent.progress_dialog.update_finished
+        ) #TODO message
         thread.signals.finished.connect(self._on_finished_update)
-        thread.signals.error_popup.connect(lambda error: self.parent.progress_dialog.update_error(message=error))
+        thread.signals.error_popup.connect(
+            lambda error: self.parent.progress_dialog.update_error(message=error)
+        )
         self.threadpool.start(thread)

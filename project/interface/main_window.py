@@ -29,9 +29,7 @@ class MainWindow(QWidget):
         self.tabs.addTab(self.server_details_tab, "Настройки сервера")
 
         self.org_list_tab.add_org_widget.org_added.connect(self.browse_keys_tab._add_org_to_list)
-        self.org_list_tab.add_org_widget.org_added.connect(self.org_list_tab._on_finished_update)
-
-        self.org_list_tab.org_updated.connect(lambda org_info: self.browse_keys_tab._update_org_in_list(org_info))
+        self.org_list_tab.org_updated.connect(lambda to_update_info: self.browse_keys_tab._update_org_in_list(to_update_info))
         self.org_list_tab.org_deleted.connect(lambda org_inn: self.browse_keys_tab._delete_org_from_list(org_inn))
 
         self.setMinimumHeight(600)

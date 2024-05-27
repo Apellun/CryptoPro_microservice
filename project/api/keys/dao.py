@@ -1,14 +1,14 @@
 import logging
-from typing import List
-from sqlalchemy import select, insert, delete
+from typing import List, Optional
+from sqlalchemy import select, delete
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from project.api.core.db.models import Key, organization_key_table, Organization
+from project.api.core.db.models import Key
 from project.api.core import exceptions
 
 
 class KeysDAO:
-    async def get_keys(self, db: AsyncSession):
+    async def get_all_keys(self, db: AsyncSession) -> List[Optional[Key]]:
         try:
             result = await db.execute(select(Key))
         except SQLAlchemyError as e:
@@ -18,13 +18,13 @@ class KeysDAO:
         else:
             return [key[0] for key in result.unique().all()]
 
-    async def get_org_keys(self, org_inn: str, db: AsyncSession):
+    async def get_keys_by_thumbprints(self, thumbprints: List[str], db: AsyncSession) -> List[Optional[Key]]:
+        stmt = (
+            select(Key)
+            .where(Key.thumbprint.in_(thumbprints))
+        )
         try:
-            result = await db.execute(
-                select(Key)
-                .join(Key.organizations)
-                .where(Organization.inn == org_inn)
-            )
+            result = await db.execute(stmt)
         except SQLAlchemyError as e:
             logging.exception(e)
             await db.rollback()
@@ -55,27 +55,6 @@ class KeysDAO:
                 delete(Key)
                 .where(Key.thumbprint.in_(thumbprints))
             )
-            await db.commit()
-
-        except SQLAlchemyError as e:
-            logging.exception(e)
-            await db.rollback()
-            raise exceptions.DatabaseError(details=str(e))
-
-    async def add_org_keys(self, org_id: int, thumbprints: List[str], db: AsyncSession):
-        try:
-            keys = await db.execute(select(Key).where(Key.thumbprint.in_(thumbprints)))
-            keys = keys.unique().all()
-
-            new_org_keys = []
-            for key in keys:
-                org_key = {
-                    "organization_id": org_id,
-                    "key_id": key[0].id
-                }
-                new_org_keys.append(org_key)
-
-            await db.execute(insert(organization_key_table).values(new_org_keys))
             await db.commit()
 
         except SQLAlchemyError as e:

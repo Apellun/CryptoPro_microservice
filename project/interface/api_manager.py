@@ -59,7 +59,13 @@ class ApiManager:
 
     def get_org_keys(self, org_inn: str) -> requests.Response:
         return self._send_request(
-            endpoint=f"keys/{org_inn}",
+            endpoint=f"organizations/{org_inn}",
+            method="GET"
+        )
+
+    def get_all_orgs_keys(self) -> requests.Response:
+        return self._send_request(
+            endpoint=f"organizations/",
             method="GET"
         )
 
@@ -105,10 +111,10 @@ class ApiManager:
             -> requests.Response:
         return self._send_request(
             request_body={
-                "thumbprints": new_keys
+                "keys": new_keys
             },
-            endpoint=f"keys/{org_inn}",
-            method="PUT"
+            endpoint=f"organizations/{org_inn}",
+            method="PATCH"
         )
 
 

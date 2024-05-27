@@ -1,12 +1,15 @@
-from typing import Optional
-from sqlalchemy import select, Sequence
+from numpy import setdiff1d
+from typing import Optional, List
+from sqlalchemy import select, Sequence, insert
 from sqlite3 import IntegrityError as SQLiteIntegrityError
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from project.api.core.db.models import Organization
+from project.api.core.db.models import Organization, organization_key_table
+from project.api.core.cache import api_cache
 from project.api.core import exceptions
 from project.api.organizations.schemas import OrganizationUpdate
+from project.api.keys.dao import keys_dao
 
 
 class OrganizationsDAO:
@@ -24,7 +27,7 @@ class OrganizationsDAO:
             )
             result = result.scalars().first()
             if not result:
-                raise exceptions.EntityNotFoundError(message="Орагнизация с данным ИНН не найдена в базе")
+                raise exceptions.EntityNotFoundError(message="Организация с данным ИНН не найдена в базе")
         except SQLAlchemyError as e:
             await db.rollback()
             raise exceptions.DatabaseError(details=str(e))
@@ -85,6 +88,50 @@ class OrganizationsDAO:
             raise exceptions.DatabaseError(details=str(e))
         else:
             return org
+
+    async def add_org_keys(self, org_id: int, thumbprints: List[str], db: AsyncSession):
+        try:
+            keys = await keys_dao.get_keys_by_thumbprints(thumbprints, db)
+
+            new_org_keys = []
+            for key in keys:
+                org_key = {
+                    "organization_id": org_id,
+                    "key_id": key.id
+                }
+                new_org_keys.append(org_key)
+
+            await db.execute(insert(organization_key_table).values(new_org_keys))
+            await db.commit()
+
+        except SQLAlchemyError as e:
+            await db.rollback()
+            raise exceptions.DatabaseError(details=str(e))
+
+    async def update_org_keys(self, org_inn: str, new_org_keys: List[str], db: AsyncSession) -> Organization:
+        new_org_keys = new_org_keys.keys
+        org = await self.get_org(org_inn, db)
+        org_keys = org.keys
+
+        existing_org_thumbprints = [key.thumbprint for key in org_keys]
+        existing_keys = await keys_dao.get_all_keys(db)
+        existing_keys_thumbprints = [key.thumbprint for key in existing_keys]
+
+        thumbprints_to_add_to_db = setdiff1d(new_org_keys, existing_keys_thumbprints)
+        thumbprints_to_add_to_org = setdiff1d(new_org_keys, existing_org_thumbprints)
+        thumbprints_to_delete = setdiff1d(existing_org_thumbprints, new_org_keys)
+
+        if len(thumbprints_to_add_to_db) > 0:
+            await keys_dao.add_keys(thumbprints_to_add_to_db, db)
+        if len(thumbprints_to_add_to_org) > 0:
+            await self.add_org_keys(org.id, thumbprints_to_add_to_org, db)
+        if len(thumbprints_to_delete) > 0:
+            await keys_dao.delete_keys(thumbprints_to_delete, db)
+
+        await db.refresh(org)
+
+        api_cache.add_to_key_cache(org_inn, org.keys)
+        return org
 
     async def delete_org(self, org_inn: str, db: AsyncSession):
         try:

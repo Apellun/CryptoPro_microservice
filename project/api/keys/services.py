@@ -1,15 +1,21 @@
 from numpy import setdiff1d
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from project.api.core.db.models import Key
 from project.api.core.cache import api_cache
 from project.api.keys.dao import keys_dao
+from project.api.keys.schemas import KeyGet, OrgKeyGet
 from project.api.organizations.dao import organizations_dao
-from project.api.organizations.schemas import KeyGet
 
 
 class KeysServices:
-    async def get_org_keys(self, org_inn: str, db: AsyncSession) -> List[Optional[Key]]:
+    async def get_all_orgs_keys(self, db: AsyncSession) -> List[Optional[OrgKeyGet]]:
+        org_keys = await keys_dao.get_all_orgs_keys(db)
+        for item in org_keys:
+            print(item)
+            # api_cache.add_to_key_cache(org, keys)
+        return org_keys
+
+    async def get_org_keys(self, org_inn: str, db: AsyncSession) -> List[Optional[KeyGet]]:
         cached_keys = api_cache.get_cached_keys(org_inn)
         if cached_keys:
             return cached_keys
@@ -24,7 +30,7 @@ class KeysServices:
         org_keys = org.keys
 
         existing_org_thumbprints = [key.thumbprint for key in org_keys]
-        existing_keys = await keys_dao.get_keys(db)
+        existing_keys = await keys_dao.get_all_keys(db)
         existing_keys_thumbprints = [key.thumbprint for key in existing_keys]
 
         thumbprints_to_add_to_db = setdiff1d(thumbprints, existing_keys_thumbprints)

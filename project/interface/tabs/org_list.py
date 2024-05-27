@@ -1,8 +1,8 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout,
     QLabel, QPushButton, QStyle,
-    QScrollArea, QMessageBox, QDialog
+    QScrollArea, QDialog
 )
 from PySide6.QtCore import Qt, QThreadPool, Signal
 from PySide6.QtGui import QIcon
@@ -14,7 +14,7 @@ from project.interface.utils.threads import DeleteOrgThread
 
 
 class OrgListTab(QWidget):
-    org_updated = Signal(tuple)
+    org_updated = Signal(dict)
     org_deleted = Signal(str)
 
     def __init__(self, parent: QWidget, org_list: List[object]):
@@ -41,13 +41,15 @@ class OrgListTab(QWidget):
         self.main_layout.addWidget(self.add_org_button, alignment=Qt.AlignmentFlag.AlignRight)
 
         self.add_org_widget = AddOrgWidget()
+        self.add_org_widget.org_added.connect(self._on_added_org)
+
         self.threadpool = QThreadPool()
         self.progress_dialog = ProgressDialog(self)
         self.update_org_widget = None #TODO init here
 
         self._populate_org_list()
 
-    def _create_org_widget(self, org) -> QWidget:
+    def _create_org_widget(self, org: Dict[str, str]) -> QWidget:
         org_widget = QWidget()
         org_layout = QHBoxLayout(org_widget)
         org_layout.setContentsMargins(0, 0, 0, 0)
@@ -85,33 +87,56 @@ class OrgListTab(QWidget):
 
         return org_widget
 
+    def _add_org_widget(self, org: Dict[str, str]) -> None:
+        org_widget = self._create_org_widget(org)
+        self.scroll_content_layout.addWidget(org_widget)
+
     def _populate_org_list(self) -> None:
         for org in self.org_list:
-            org_widget = self._create_org_widget(org)
-            self.scroll_content_layout.addWidget(org_widget)
+            self._add_org_widget(org)
 
-    def _add_org(self) -> None:
+    def _add_org(self) -> None: #TODO: needs progress popup + the org list doesnt refresh after adding
         self.add_org_widget.show()
 
-    def _on_finished_update(self, org_widget: QWidget, previous_org: Dict[str, str],
-                            org_details: Dict[str, str]) -> None:
-        layout = org_widget.layout()
-        for j in range(org_widget.layout().count()):
-            child = layout.itemAt(j).widget()
-            if isinstance(child, QLabel):
-                child.setText(f"{org_details["inn"]} ({org_details["name"]})")
-        self.org_updated.emit((previous_org, org_details))
+    def _on_added_org(self, update_info: Dict[str, str]) -> None:
+        org_widget = self._create_org_widget(update_info)
+        self.scroll_content_layout.addWidget(org_widget)
 
-    def update_org(self, org_inn: str, org_name: str, org_widget: QWidget) -> None:
-        self.update_org_widget = UpdateOrgWidget(org_inn, org_name, org_widget, self)
-        previous_org = (
-            {"name": org_widget,
-             "inn": org_inn}
+    def _on_finished_update(self, to_update_info: Dict[str, Optional[dict | QWidget]]) -> None:
+        layout = to_update_info["widget"].layout()
+        label = layout.itemAt(1).widget()
+        label.setText(f"{to_update_info["updated_org"]["inn"]} ({to_update_info["updated_org"]["name"]})")
+
+        button_layout = layout.itemAt(0).layout()
+        delete_button = button_layout.itemAt(0).widget()
+        edit_button = button_layout.itemAt(1).widget()
+
+        delete_button.clicked.disconnect()
+        edit_button.clicked.disconnect()
+
+        delete_button.clicked.connect(
+            lambda: self.confirm_delete(
+                to_update_info["updated_org"]["inn"],
+                to_update_info["widget"])
         )
+        edit_button.clicked.connect(
+            lambda: self.update_org(
+                to_update_info["updated_org"]["inn"],
+                to_update_info["updated_org"]["name"],
+                to_update_info["widget"])
+        )
+
+        self.org_updated.emit(
+            {
+            "updated_org": to_update_info["updated_org"],
+            "previous_org": to_update_info["previous_org"],
+        }
+        )
+
+    def update_org(self, org_inn: str, org_name: str, org_widget: QWidget) -> None: #TODO: doesnt find org by inn + wonky result popup
+        self.update_org_widget = UpdateOrgWidget(org_inn, org_name, org_widget, parent=self)
         self.update_org_widget.org_updated.connect(
-            lambda updated_org: self._on_finished_update(
-                org_widget, previous_org, updated_org
-            )
+            lambda to_update_info: self._on_finished_update(to_update_info)
         )
         self.update_org_widget.show()
 
@@ -123,7 +148,7 @@ class OrgListTab(QWidget):
         thread = DeleteOrgThread(org_inn)
         thread.signals.progress_popup.connect(lambda message: self.progress_dialog.update_progress(message=message))
         thread.signals.finished_popup.connect(lambda message: self.progress_dialog.update_finished(message=message))
-        thread.signals.finished.connect(lambda: self._on_delete_org(org_inn, org_widget))
+        thread.signals.finished.connect(lambda: self._on_delete_org(org_inn, org_widget)) #TODO message
         thread.signals.error_popup.connect(lambda error: self.progress_dialog.update_error(message=error))
         self.threadpool.start(thread)
 

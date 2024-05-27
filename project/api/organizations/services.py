@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from project.api.core.db.models import Organization
 from project.api.core.cache import api_cache
 from project.api.organizations.dao import organizations_dao
-from project.api.organizations.schemas import OrganizationUpdate
+from project.api.organizations.schemas import OrganizationUpdate, OrganizationKeysUpdate
 
 
 class OrganizationsServices:
@@ -32,6 +32,10 @@ class OrganizationsServices:
     async def update_org(self, old_inn: str, new_org_details: OrganizationUpdate, db: AsyncSession) -> Organization:
         result = await organizations_dao.update_org(old_inn, new_org_details, db)
         api_cache.add_to_org_cache(new_org_details.inn, result)
+        return result
+
+    async def update_org_keys(self, org_inn: str, new_org_keys: OrganizationKeysUpdate, db: AsyncSession) -> Organization:
+        result = await organizations_dao.update_org_keys(org_inn, new_org_keys, db)
         return result
 
     async def delete_org(self, org_inn: str, db: AsyncSession) -> None:

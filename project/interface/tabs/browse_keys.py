@@ -5,11 +5,12 @@ from PySide6.QtWidgets import (
     QSizePolicy, QCheckBox
 )
 from PySide6.QtCore import QThreadPool, Qt
-from project.interface.utils.threads import UpdateOrgKeysThread, GetOrgKeysThread
+from project.interface.utils.threads import UpdateOrgKeysThread
 from project.interface.dialogs.progress_dialog import ProgressDialog
 from project.utils.csp.win_csp import WinCspManager
 from project.interface.utils import mock_csp
 from project.interface.api_manager import manager
+from project.interface.utils.mock_csp_updated import get_refreshed_keys_list
 
 
 class KeyItemWidget(QWidget):
@@ -39,51 +40,23 @@ class BrowseKeysTab(QWidget):
         super().__init__()
 
         self.org_list = org_list
-        self.org_key_list_cache = manager.get_all_orgs_keys()
+
+        self.orgs_keys_dict = None #immutable, dict with db schema structures
         self.keys = None #immutable, objects
         self._checked_keys = None #mutable, string reprs
         self._unchecked_keys = None #mutable, string reprs
 
         self.threadpool = QThreadPool()
-
-        self.layout = QVBoxLayout()
-        self.setLayout(self.layout)
-
-        self.org_label = QLabel("Организация:")
-        self.inn_selection = QComboBox()
-        self.layout.addWidget(self.org_label)
-        self.layout.addWidget(self.inn_selection)
-        self.inn_selection.currentIndexChanged.connect(self._set_checked_keys)
-
-        self.browse_keys_label = QLabel("Доступные ключи:")
-
-        self.refresh_keys_button = QPushButton("Обновить список доступных ключей")
-        self.refresh_keys_button.clicked.connect(self._set_checked_keys)
-
-        line_layout = QHBoxLayout()
-        line_layout.addWidget(self.browse_keys_label)
-        line_layout.addWidget(self.refresh_keys_button, alignment=Qt.AlignmentFlag.AlignRight)
-        self.layout.addLayout(line_layout)
-
-        self.browse_keys_list = KeyItemWidget(self)
-        self.layout.addWidget(self.browse_keys_list)
-
-        self.bind_key_button = QPushButton("Использовать выбранные ключи для организации")
-        self.bind_key_button.clicked.connect(self.update_org_keys)
-        self.layout.addWidget(self.bind_key_button)
-
         self.progress_dialog = ProgressDialog(self)
 
         self._processing_update = False
 
-        self._get_keys_list()
-        self._render_keys_list()
-        self._fill_org_combobox()
-        self._set_checked_keys()
+        self._init_ui()
+        self._load_data()
+        self._render_data()
+        self._connect_elements()
 
-    def _get_keys_list(self) -> None:
-        win_csp_manager = WinCspManager()
-        self.keys_list = win_csp_manager.certificates() + mock_csp.get_mock_keys()
+        self.refresh_counter = 0
 
     def _on_checkbox_checked(self, state: int, key_str: str) -> None:
         if not self._processing_update:
@@ -99,6 +72,86 @@ class BrowseKeysTab(QWidget):
                     self._checked_keys.remove(key_str)
                 except ValueError:
                     pass
+
+    def _on_org_selected(self):
+        self._set_checked_keys()
+        self._render_keys()
+
+    def _on_keys_refreshed(self):
+        self.keys_list = get_refreshed_keys_list(self.refresh_counter)
+
+        if self.refresh_counter:
+            self.refresh_counter = 0
+        else:
+            self.refresh_counter = 1
+
+        widgets_amount = self.browse_keys_list.scroll_content_layout.count()
+        # self._get_keys_list()
+
+        diff = len(self.keys_list) - widgets_amount
+        i = abs(diff)
+
+        match diff:
+            case x if x < 0:
+                while i > 0:
+                    item = self.browse_keys_list.scroll_content_layout.itemAt(widgets_amount - 1 - i)
+                    widget = item.widget()
+                    self.browse_keys_list.scroll_content_layout.removeWidget(widget)
+                    widget.deleteLater()
+                    i -= 1
+
+            case x if x > 0:
+                while i > 0:
+                    key_widget = self._create_key_widget("")
+                    self.browse_keys_list.scroll_content_layout.addWidget(key_widget)
+                    i -= 1
+
+        self._set_checked_keys()
+        self._render_keys()
+
+    def _init_ui(self):
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+
+        self.org_label = QLabel("Организация:")
+        self.inn_selection = QComboBox()
+        self.layout.addWidget(self.org_label)
+        self.layout.addWidget(self.inn_selection)
+
+        self.browse_keys_label = QLabel("Доступные ключи:")
+
+        self.refresh_keys_button = QPushButton("Обновить список доступных ключей")
+
+        line_layout = QHBoxLayout()
+        line_layout.addWidget(self.browse_keys_label)
+        line_layout.addWidget(
+            self.refresh_keys_button,
+            alignment=Qt.AlignmentFlag.AlignRight
+        )
+        self.layout.addLayout(line_layout)
+
+        self.browse_keys_list = KeyItemWidget(self)
+        self.layout.addWidget(self.browse_keys_list)
+
+        self.bind_key_button = QPushButton("Использовать выбранные ключи для организации")
+        self.layout.addWidget(self.bind_key_button)
+
+    def _create_orgs_keys_cache(self) -> None:
+        orgs_keys = manager.get_all_orgs_keys()
+        orgs_keys_cache = {}
+
+        for item in orgs_keys:
+            orgs_keys_cache[item['inn']] = [key["thumbprint"] for key in item["keys"]]
+
+        self.orgs_keys_dict = orgs_keys_cache
+
+    def _get_keys_list(self) -> None:
+        win_csp_manager = WinCspManager()
+        self.keys_list = win_csp_manager.certificates() + mock_csp.get_mock_keys()
+
+    def _load_data(self):
+        self._create_orgs_keys_cache()
+        self._get_keys_list()
 
     def _create_key_widget(self, key_str: str) -> QWidget:
         key_widget = QWidget()
@@ -135,31 +188,19 @@ class BrowseKeysTab(QWidget):
             selected_org_inn = org_info.split(' ')[0]
         return selected_org_inn
 
-    def _sort_org_keys(self, keys: List[Dict]) -> None:
-        thumbprints = [key["thumbprint"] for key in keys]
-        thumbprints = [str(key) for key in self.keys_list if key.Thumbprint in thumbprints]
-
+    def _get_checked_keys(self, selected_org_inn: str) -> None:
+        checked_keys = self.orgs_keys_dict[selected_org_inn]
         self._checked_keys = []
         self._unchecked_keys = []
-
         for key in self.keys_list:
-            if str(key) in thumbprints:
+            if key.Thumbprint in checked_keys:
                 self._checked_keys.append(str(key))
             else:
                 self._unchecked_keys.append(str(key))
 
-    def _render_checked_keys(self, keys: List[Dict]) -> None:
-        self._sort_org_keys(keys)
-        self._update_checked_keys() #TODO: signal?
-
     def _set_checked_keys(self) -> None:
         selected_org_inn = self._get_current_org_inn()
-
-        # thread = GetOrgKeysThread(selected_org_inn)
-        # thread.signals.error_popup.connect(lambda error: self.progress_dialog.update_error(message=error))
-        # thread.signals.result.connect(lambda keys: self._render_checked_keys(keys))
-        # self.threadpool.start(thread)
-        self._render_checked_keys(self.org_key_list_cache)
+        self._get_checked_keys(selected_org_inn)
 
     def _update_key_widget(self, index: int, key: str, checked: bool = False) -> None:
         container_widget = self.browse_keys_list.scroll_content_layout.itemAt(index).widget()
@@ -173,10 +214,10 @@ class BrowseKeysTab(QWidget):
         else:
             checkbox.setChecked(False)
 
-    def _update_checked_keys(self) -> None:
+    def _render_keys(self) -> None:
         self._processing_update = True
 
-        keys = sorted(self._checked_keys) + sorted(self._unchecked_keys)
+        keys = self._checked_keys + self._unchecked_keys
         checked_amount = len(self._checked_keys)
 
         for i in range(self.browse_keys_list.scroll_content_layout.count()):
@@ -186,6 +227,17 @@ class BrowseKeysTab(QWidget):
                 self._update_key_widget(i, keys[i])
 
         self._processing_update = False
+
+    def _render_data(self):
+        self._fill_org_combobox()
+        self._render_keys_list()
+        self._set_checked_keys()
+        self._render_keys()
+
+    def _connect_elements(self):
+        self.inn_selection.currentIndexChanged.connect(self._on_org_selected)
+        self.refresh_keys_button.clicked.connect(self._on_keys_refreshed)
+        self.bind_key_button.clicked.connect(self.update_org_keys)
 
     def _get_keys_to_update(self) -> List[str]:
         keys = []
@@ -203,7 +255,7 @@ class BrowseKeysTab(QWidget):
 
         thread = UpdateOrgKeysThread(selected_org_inn, new_org_keys) #TODO: QMessageBox ??
         thread.signals.progress_popup.connect(lambda message: self.progress_dialog.update_progress(message=message))
-        thread.signals.finished.connect(self._update_checked_keys)
+        thread.signals.finished.connect(self._render_keys)
         thread.signals.finished_popup.connect(lambda message: self.progress_dialog.update_finished(message=message))
         thread.signals.error_popup.connect(lambda error: self.progress_dialog.update_error(message=error))
         self.threadpool.start(thread)

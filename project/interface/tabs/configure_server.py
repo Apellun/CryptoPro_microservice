@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QThreadPool
 from project.interface.utils.threads import UpdateServerSettingsThread
+from project.interface.utils.text import ConfigureServerText as Text, MainText
 
 
 class ConfigureServerTab(QWidget):
@@ -14,31 +15,31 @@ class ConfigureServerTab(QWidget):
         self.layout.setAlignment(Qt.AlignTop)
         self.setLayout(self.layout)
 
-        self.host_label = QLabel("Адрес:")
+        self.host_label = QLabel(Text.host_label)
         self.host_edit = QLineEdit()
         self.layout.addWidget(self.host_label)
         self.layout.addWidget(self.host_edit)
 
-        self.port_label = QLabel("Порт:")
+        self.port_label = QLabel(Text.port_label)
         self.port_edit = QLineEdit()
         self.layout.addWidget(self.port_label)
         self.layout.addWidget(self.port_edit)
 
-        self.saveButton = QPushButton("Сохранить")
+        self.saveButton = QPushButton(Text.save_button)
         self.layout.addWidget(self.saveButton)
         self.saveButton.clicked.connect(self.update_server_settings)
 
         self.threadpool = QThreadPool()
 
-    def update_server_settings(self) -> None:
+    def update_server_settings(self) -> None: #TODO: add progress popup
         host = self.host_edit.text()
         port = self.port_edit.text()
 
         if not host or not port:
-            QMessageBox.warning(self, "Ошибка","Значения полей не могут быть пустыми.")
+            QMessageBox.warning(self, MainText.error_title, Text.empty_field_error)
             return
         if not port.isnumeric():
-            QMessageBox.warning(self, "Ошибка",'Убедитесь, что в поле "порт" только цифры')
+            QMessageBox.warning(self, MainText.error_title, Text.port_validation_error)
             return
 
         thread = UpdateServerSettingsThread(host, port)
@@ -47,7 +48,7 @@ class ConfigureServerTab(QWidget):
         self.threadpool.start(thread)
 
     def on_update_finished(self) -> None:
-        QMessageBox.information(self, "Успешно", "Настройки успешно изменены.")
+        QMessageBox.information(self, MainText.success_title, MainText.success_message)
 
     def on_update_error(self, message: str) -> None:
-        QMessageBox.warning(self, "Ошибка", message)
+        QMessageBox.warning(self, MainText.error_title, message)

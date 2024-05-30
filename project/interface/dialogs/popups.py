@@ -3,6 +3,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QPushButton
 )
 from PySide6 import QtCore
+from project.interface.utils.text import MainText
 
 
 class InfoPopup(QDialog):
@@ -22,24 +23,31 @@ class InfoPopup(QDialog):
 class ConfirmationPopup(QDialog):
     def __init__(self, message, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Подтвердите действие")
+        self.message = message
+
+        self._init_ui_()
+        self._connect_buttons()
+
+    def _init_ui_(self):
+        self.setWindowTitle(MainText.confirm_action)
         self.setModal(True)
 
         layout = QVBoxLayout()
 
-        self.label = QLabel(message)
+        self.label = QLabel(self.message)
         layout.addWidget(self.label)
 
         button_layout = QHBoxLayout()
 
-        self.confirm_button = QPushButton("Продолжить")
-        self.confirm_button.clicked.connect(self.accept)
+        self.confirm_button = QPushButton(MainText.continue_action)
         button_layout.addWidget(self.confirm_button)
 
-        self.cancel_button = QPushButton("Отмена")
-        self.cancel_button.clicked.connect(self.reject)
+        self.cancel_button = QPushButton(MainText.discard_action)
         button_layout.addWidget(self.cancel_button)
 
         layout.addLayout(button_layout)
-
         self.setLayout(layout)
+
+    def _connect_buttons(self):
+        self.confirm_button.clicked.connect(self.accept)
+        self.cancel_button.clicked.connect(self.reject)

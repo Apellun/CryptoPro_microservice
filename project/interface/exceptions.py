@@ -1,24 +1,29 @@
-class ServerConnectionError(Exception):
+from project.interface.utils.text import MainText
+
+
+class APIConnectionError(Exception):
     def __init__(self):
-        message = "Ошибка подключения к серверу."
+        message = MainText.api_connection_error
         super().__init__(message)
 
 
 class EmptyResponseError(Exception):
     def __init__(self):
-        message = "Сервер не вернул ответ."
+        message = MainText.empty_response_error
         super().__init__(message)
 
 
 class ResponseCodeError(Exception):
     def __init__(self, code, response_message):
-        message = f"Неправильный запрос к серверу:\n{code}:{response_message}."
+        message = MainText.get_response_code_error(
+            code, response_message
+        )
         super().__init__(message)
 
 
-class InternalServerError(Exception):
+class InternalAPIError(Exception):
     def __init__(self):
-        message = f"Внутренняя ошибка сервера."
+        message = MainText.internal_api_error
         super().__init__(message)
 
 

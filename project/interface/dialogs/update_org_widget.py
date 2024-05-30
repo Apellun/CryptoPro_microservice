@@ -5,6 +5,9 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QThreadPool, Signal
 from project.interface.utils.threads import UpdateOrgThread
+from project.interface.utils.data_manager import data_manager
+from project.interface.utils.text import MainText
+from project.interface.utils.const import Const
 
 
 class UpdateOrgWidget(QWidget):
@@ -44,20 +47,19 @@ class UpdateOrgWidget(QWidget):
     @staticmethod
     def _validate_inn(inn: str):
         if inn.isnumeric():
-            pat = re.compile(r"^\d{10,12}$")
+            pat = re.compile(Const.inn_validation_pattern)
             if re.fullmatch(pat, inn):
                 return True
         return False
 
     def _on_finished_update(self) -> None:
         self.org_updated.emit(
-            {
-            "updated_org": {"name": self.org_name_edit.text(),
-                            "inn": self.inn_edit.text()},
-            "previous_org": {"name": self.org_name,
-                            "inn": self.org_inn},
-            "widget": self.widget
-            }
+            data_manager.get_org_updated_dict(
+                new_org_name=self.org_name_edit.text(),
+                new_inn=self.inn_edit.text(),
+                old_inn=self.org_inn,
+                widget=self.widget
+            )
         )
 
     def update_org(self) -> None:
@@ -66,13 +68,18 @@ class UpdateOrgWidget(QWidget):
 
         if org_inn:
             if not self._validate_inn(org_inn):
-                QMessageBox.warning(self, "Ошибка","Некорерктный ИНН, проверьте правильность заполнения.")
+                QMessageBox.warning(
+                    self,
+                    MainText.error_title,
+                    MainText.inn_validation_error)
                 return
 
         thread = UpdateOrgThread(
             self.org_inn,
-            {"inn": org_inn,
-             "name": org_name}
+            {
+                Const.org_inn_index: org_inn,
+                Const.org_name_index: org_name
+            }
         )
 
         thread.signals.progress_popup.connect(

@@ -1,6 +1,7 @@
 from typing import Dict, List
 from PySide6.QtCore import QRunnable, Signal, Slot, QObject
 from project.interface.api_manager import manager
+from project.interface.utils.text import MainText
 
 
 class BaseSignals(QObject):
@@ -52,10 +53,12 @@ class UpdateOrgThread(QRunnable):
     @Slot()
     def run(self) -> None:
         try:
-            self.signals.progress_popup.emit("Сохраняем настройки...") #TODO: separate messages
+            self.signals.progress_popup.emit(MainText.in_progress)
             manager.update_org(self.old_inn, self.new_org_details)
+
             self.signals.finished.emit()
-            self.signals.finished_popup.emit("Настройки успешно сохранены")
+            self.signals.finished_popup.emit(MainText.process_finished)
+
         except Exception as error:
             self.signals.error_popup.emit(str(error))
 
@@ -69,25 +72,12 @@ class DeleteOrgThread(QRunnable):
     @Slot()
     def run(self) -> None:
         try:
-            self.signals.progress_popup.emit("Сохраняем настройки...")
+            self.signals.progress_popup.emit(MainText.in_progress)
             manager.delete_org(self.org_inn)
-            self.signals.finished_popup.emit("Настройки успешно сохранены")
+
+            self.signals.finished_popup.emit(MainText.process_finished)
             self.signals.finished.emit()
-        except Exception as error:
-            self.signals.error_popup.emit(str(error))
 
-
-class GetOrgKeysThread(QRunnable):
-    def __init__(self, org_inn):
-        super(GetOrgKeysThread, self).__init__()
-        self.org_inn = org_inn
-        self.signals = BaseSignals()
-
-    @Slot()
-    def run(self):
-        try:
-            result = manager.get_org_keys(self.org_inn)
-            self.signals.result.emit(result)
         except Exception as error:
             self.signals.error_popup.emit(str(error))
 
@@ -102,10 +92,11 @@ class UpdateOrgKeysThread(QRunnable):
     @Slot()
     def run(self) -> None:
         try:
-            self.signals.progress_popup.emit("Сохраняем настройки...")
+            self.signals.progress_popup.emit(MainText.in_progress)
             manager.update_org_keys(self.org_inn, self.keys)
+
             self.signals.finished.emit()
-            self.signals.finished_popup.emit("Настройки успешно сохранены")
+
         except Exception as error:
             self.signals.error_popup.emit(str(error))
 
@@ -122,5 +113,6 @@ class UpdateServerSettingsThread(QRunnable):
         try:
             manager.update_server_settings(self.host, self.port)
             self.signals.finished.emit()
+
         except Exception as error:
             self.signals.error_popup.emit(str(error))

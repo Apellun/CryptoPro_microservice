@@ -10,7 +10,7 @@ from project.api.organizations.schemas import OrganizationUpdate, OrganizationKe
 class OrganizationsServices:
     async def get_org(self, org_inn: str, db: AsyncSession) -> Organization:
         if api_cache.org_cache:
-            org_instance_cache = api_cache.org_cache.get(org_inn, None)
+            org_instance_cache = api_cache.org_cache.GET(org_inn, None)
             if org_instance_cache and datetime.now() - org_instance_cache[1] < timedelta(minutes=15):
                 return org_instance_cache[0]
 
@@ -18,8 +18,8 @@ class OrganizationsServices:
         api_cache.add_to_org_cache(org_inn, result)
         return result
 
-    async def get_org_list(self, db: AsyncSession) -> List[Optional[Organization]]:
-        result = await organizations_dao.get_org_list(db)
+    async def get_orgs_list(self, db: AsyncSession) -> List[Optional[Organization]]:
+        result = await organizations_dao.get_orgs_list(db)
         for org in result:
             api_cache.add_to_key_cache(org.inn, org.keys)
         return result

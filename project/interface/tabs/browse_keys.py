@@ -1,27 +1,23 @@
-from typing import Dict
-from functools import partial
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QComboBox,
     QPushButton, QHBoxLayout, QScrollArea,
     QSizePolicy, QCheckBox
 )
-from PySide6.QtCore import QThreadPool, Qt
-from project.interface.utils.threads import UpdateOrgKeysThread
-from project.interface.dialogs.progress_dialog import ProgressDialog
+from PySide6.QtCore import Qt
+from project.interface.core.threads.thread_manager import thread_manager
 from project.utils.csp.win_csp import WinCspManager, CspCertificate
-from project.interface.api_manager import manager
+from project.interface.core.api_manager import api_manager
 from project.interface.utils import mock_csp
-from project.interface.utils.mock_csp_updated import get_refreshed_keys_list
 from project.interface.utils.const import Const
 from project.interface.utils.text import BrowseKeysText as Text
 from project.interface.utils.data_manager import data_manager
+from project.interface import config
 
 
 class KeyItemWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.layout = QHBoxLayout(self)
-        self.layout.setContentsMargins(*Const.browse_keys_margins)
         self.setLayout(self.layout)
 
         self.scroll_area = QScrollArea()
@@ -29,7 +25,7 @@ class KeyItemWidget(QWidget):
 
         self.scroll_content = QWidget()
         self.scroll_content_layout = QVBoxLayout(self.scroll_content)
-        self.scroll_content_layout.setSpacing(Const.browse_keys_spacing)
+        self.scroll_content_layout.setSpacing(config.BROWSE_KEYS_SPACING)
         self.scroll_content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.scroll_area.setWidget(self.scroll_content)
@@ -40,18 +36,16 @@ class KeyItemWidget(QWidget):
 
 
 class BrowseKeysTab(QWidget):
-    def __init__(self, org_list):
-        super().__init__()
+    def __init__(self, parent: QWidget):
+        self.parent = parent
+        super().__init__(parent=parent)
 
-        self.org_list = org_list
+        self.org_list = parent.org_list
 
-        self.orgs_keys_dict = None #half mmutable, dict inn: [key.thumbprint]
+        self.orgs_keys_cache = None #half mmutable, dict inn: [key.thumbprint]
         self.keys = None #immutable, objects
         self._checked_keys = None #mutable, dict inn: [key]
         self._unchecked_keys = None #mutable, dict inn: [key]
-
-        self.threadpool = QThreadPool()
-        self.progress_dialog = ProgressDialog(self)
 
         self._processing_update = False
 
@@ -60,7 +54,7 @@ class BrowseKeysTab(QWidget):
         self._fill_ui_with_data()
         self._connect_buttons()
 
-        self.refresh_counter = 0 #TODO cut
+        # self.refresh_counter = 0
 
     def _on_checkbox_checked(self, state: int, key: CspCertificate) -> None:
         if not self._processing_update:
@@ -87,15 +81,15 @@ class BrowseKeysTab(QWidget):
         self._render_keys()
 
     def _on_keys_refreshed(self) -> None:
-        self.keys_list = get_refreshed_keys_list(self.refresh_counter)
-
-        if self.refresh_counter: #TODO: to cut
-            self.refresh_counter = 0
-        else:
-            self.refresh_counter = 1
+        # self.keys_list = get_refreshed_keys_list(self.refresh_counter)
+        #
+        # if self.refresh_counter:
+        #     self.refresh_counter = 0
+        # else:
+        #     self.refresh_counter = 1
 
         widgets_amount = self.browse_keys_list.scroll_content_layout.count()
-        # self._get_keys_list()
+        self._get_keys_list()
 
         diff = len(self.keys_list) - widgets_amount
         i = abs(diff)
@@ -111,7 +105,7 @@ class BrowseKeysTab(QWidget):
 
             case x if x > 0:
                 while i > 0:
-                    key_widget = self._create_key_widget("")
+                    key_widget = self._create_key_widget()
                     self.browse_keys_list.scroll_content_layout.addWidget(key_widget)
                     i -= 1
 
@@ -146,16 +140,13 @@ class BrowseKeysTab(QWidget):
         self.layout.addWidget(self.bind_key_button)
 
     def _create_orgs_keys_cache(self) -> None:
-        orgs_keys = manager.get_all_orgs_keys()
+        orgs_keys = api_manager.get_all_orgs_keys()
         orgs_keys_cache = {}
 
         for item in orgs_keys:
-            orgs_keys_cache[
-                item[Const.org_inn_index]] = [
-                    key[Const.key_thumbprint_index]
-                    for key in item[Const.key_list_index]
-            ]
-        self.orgs_keys_dict = orgs_keys_cache
+            orgs_keys_cache[item["inn"]] = [key["thumbprint"] for key in item["keys"]]
+
+        self.orgs_keys_cache = orgs_keys_cache
 
     def _get_keys_list(self) -> None:
         win_csp_manager = WinCspManager()
@@ -165,20 +156,19 @@ class BrowseKeysTab(QWidget):
         self._create_orgs_keys_cache()
         self._get_keys_list()
 
-    def _create_key_widget(self, key: CspCertificate) -> QWidget:
+    def _create_key_widget(self, key: CspCertificate = None) -> QWidget:
         key_widget = QWidget()
         key_layout = QHBoxLayout(key_widget)
-        key_layout.setContentsMargins(*Const.browse_keys_margins)
 
         checkbox = QCheckBox(parent=key_widget)
         checkbox.stateChanged.connect(lambda state: self._on_checkbox_checked(state, key))
 
-        label = QLabel(str(key))
+        label = QLabel(str(key) if key else "")
         label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         label.setWordWrap(True)
 
         key_layout.addWidget(checkbox)
-        key_layout.addWidget(label, stretch=Const.browse_keys_key_layout_stretch)
+        key_layout.addWidget(label, stretch=config.BROWSE_KEYS_KEY_LAYOUT_STRETCH)
 
         return key_widget
 
@@ -189,20 +179,23 @@ class BrowseKeysTab(QWidget):
 
     def _fill_org_combobox(self) -> None:
         for org in self.org_list:
-            org_str = data_manager.get_org_string(org)
+            org_str = data_manager.get_org_string(
+                org_inn=org["inn"],
+                org_name=org["name"]
+            )
             self.inn_selection.addItem(org_str)
 
     def _get_current_org_inn(self) -> str:
         index = self.inn_selection.currentIndex()
         if index == -1:
-            selected_org_inn = self.org_list[0][Const.org_inn_index]
+            selected_org_inn = self.org_list[0]["inn"]
         else:
             org_info = self.inn_selection.itemText(index)
             selected_org_inn = data_manager.get_org_inn(org_info)
         return selected_org_inn
 
     def _get_checked_keys(self, selected_org_inn: str) -> None:
-        checked_keys = self.orgs_keys_dict.get(selected_org_inn, {})
+        checked_keys = self.orgs_keys_cache.get(selected_org_inn, {})
         self._checked_keys = {}
         self._unchecked_keys = {}
 
@@ -216,13 +209,22 @@ class BrowseKeysTab(QWidget):
         selected_org_inn = self._get_current_org_inn()
         self._get_checked_keys(selected_org_inn)
 
+    def _get_key_widget(self, index: int) -> QWidget:
+        return self.browse_keys_list.scroll_content_layout.itemAt(index).widget()
+
+    def _get_key_widget_label(self, key_index: int) -> QWidget:
+        container_widget = self._get_key_widget(key_index)
+        return container_widget.layout().itemAt(1).widget()
+
+    def _get_key_widget_checkbox(self, key_index: int) -> QWidget:
+        container_widget = self._get_key_widget(key_index)
+        return container_widget.layout().itemAt(0).widget()
+
     def _update_key_widget(self, index: int, key: CspCertificate, checked: bool = False) -> None:
-        container_widget = self.browse_keys_list.scroll_content_layout.itemAt(index).widget()
-        key_layout = container_widget.layout()
-        label = key_layout.itemAt(Const.browse_keys_key_widget_label_index).widget()
+        label = self._get_key_widget_label(index)
         label.setText(str(key))
 
-        checkbox = key_layout.itemAt(Const.browse_keys_key_widget_checkbox_index).widget()
+        checkbox = self._get_key_widget_checkbox(index)
         if checked:
             checkbox.setChecked(True)
         else:
@@ -256,59 +258,63 @@ class BrowseKeysTab(QWidget):
         self.refresh_keys_button.clicked.connect(self._on_keys_refreshed)
         self.bind_key_button.clicked.connect(self.update_org_keys)
 
-    def _on_updated_org_keys(self):
+    def on_updated_org_keys(self):
         self._render_keys()
 
         org_inn = self._get_current_org_inn()
-        self.orgs_keys_dict[org_inn] = [
+        self.orgs_keys_cache[org_inn] = [
             thumbprint for thumbprint in self._checked_keys.keys()
         ]
 
     def update_org_keys(self) -> None:
         index = self.inn_selection.currentIndex()
         org_info = self.inn_selection.itemText(index)
-        selected_org_inn = data_manager.get_org_inn(org_info)
 
+        selected_org_inn = data_manager.get_org_inn(org_info)
         new_org_keys = [thumbprint for thumbprint in self._checked_keys.keys()]
 
-        thread = UpdateOrgKeysThread(selected_org_inn, new_org_keys) #TODO: QMessageBox ??
-        thread.signals.progress_popup.connect(
-            lambda message: self.progress_dialog.update_progress(message=message)
+        thread_manager.run_update_org_keys_thread(
+            selected_org_inn, new_org_keys
         )
-        thread.signals.finished.connect(self._on_updated_org_keys)
-        thread.signals.finished_popup.connect(
-            self.progress_dialog.update_finished
-        )
-        thread.signals.error_popup.connect(
-            lambda error: self.progress_dialog.update_error(message=error)
-        )
-        self.threadpool.start(thread)
 
-    def _add_org_to_list(self, new_org: Dict[str, str]) -> None:
-        self.org_list.append(new_org)
-        org_str = data_manager.get_org_string(new_org)
+    def on_org_added(self, org_name: str, org_inn: str) -> None:
+        self.org_list.append(
+            {"name": org_name, "inn": org_inn}
+        )
+        org_str = data_manager.get_org_string(
+            org_inn=org_inn,
+            org_name=org_name
+        )
         self.inn_selection.addItem(org_str)
 
-    def _delete_org_from_list(self, org_inn: str) -> None:
+    def _update_org_in_cache(self, old_inn: str, new_inn: str) -> None:
+        org_keys = self.orgs_keys_cache[old_inn]
+        del self.orgs_keys_cache[old_inn]
+        self.orgs_keys_cache[new_inn] = org_keys
+
+    def on_org_updated(
+            self, old_inn: str, org_inn: str, org_name: str, org_widget: QWidget
+    ) -> None:
+        item_count = self.inn_selection.count()
+
+        for index in range(item_count):
+            item_text = self.inn_selection.itemText(index)
+            if item_text.startswith(old_inn):
+                self.inn_selection.setItemText(
+                        index,
+                        data_manager.get_org_string(
+                            org_inn=org_inn,
+                            org_name=org_name
+                        )
+                   )
+        self._update_org_in_cache(
+            old_inn=old_inn,
+            new_inn=org_inn
+        )
+
+    def on_org_deleted(self, org_inn: str, org_widget: QWidget) -> None:
         item_count = self.inn_selection.count()
         for index in range(item_count):
             item_text = self.inn_selection.itemText(index)
             if item_text.startswith(org_inn):
                 self.inn_selection.removeItem(index)
-
-    def _update_org_in_list(self, to_update_info: Dict[str, str]) -> None:
-        item_count = self.inn_selection.count()
-
-        for index in range(item_count):
-            item_text = self.inn_selection.itemText(index)
-            if item_text.startswith(
-                    to_update_info[Const.previous_org_index]
-            ):
-                self.inn_selection.setItemText(
-                        index,
-                        data_manager.get_org_string(to_update_info[Const.updated_org_index])
-                   )
-
-        org_keys = self.orgs_keys_dict[to_update_info[Const.previous_org_index]]
-        del self.orgs_keys_dict[to_update_info[Const.previous_org_index]]
-        self.orgs_keys_dict[to_update_info[Const.updated_org_index][Const.org_inn_index]] = org_keys

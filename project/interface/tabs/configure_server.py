@@ -3,13 +3,14 @@ from PySide6.QtWidgets import (
     QLabel, QPushButton, QMessageBox
 )
 from PySide6.QtCore import Qt, QThreadPool
-from project.interface.utils.threads import UpdateServerSettingsThread
+from project.interface.core.threads.thread_manager import thread_manager
 from project.interface.utils.text import ConfigureServerText as Text, MainText
 
 
 class ConfigureServerTab(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent: QWidget):
+        self.parent = parent
+        super().__init__(parent=parent)
 
         self.layout = QVBoxLayout()
         self.layout.setAlignment(Qt.AlignTop)
@@ -42,13 +43,4 @@ class ConfigureServerTab(QWidget):
             QMessageBox.warning(self, MainText.error_title, Text.port_validation_error)
             return
 
-        thread = UpdateServerSettingsThread(host, port)
-        thread.signals.finished.connect(self.on_update_finished)
-        thread.signals.error_popup.connect(self.on_update_error)
-        self.threadpool.start(thread)
-
-    def on_update_finished(self) -> None:
-        QMessageBox.information(self, MainText.success_title, MainText.success_message)
-
-    def on_update_error(self, message: str) -> None:
-        QMessageBox.warning(self, MainText.error_title, message)
+        thread_manager.run_update_server_settings_thread(host=host, port=port)

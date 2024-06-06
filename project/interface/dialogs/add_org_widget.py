@@ -3,20 +3,17 @@ from PySide6.QtWidgets import (
     QWidget, QLineEdit, QVBoxLayout,
     QLabel, QPushButton, QMessageBox
 )
-from PySide6.QtCore import Qt, QThreadPool, Signal
-from project.interface.utils.threads import AddOrgThread
+from PySide6.QtCore import Qt
+from project.interface.core.threads.thread_manager import thread_manager
 from project.interface.utils.text import MainText, AddOrgText as Text
 from project.interface.utils.const import Const
 
 
 class AddOrgWidget(QWidget):
-    org_added = Signal(dict)
-
     def __init__(self):
         super().__init__()
 
         self._init_ui_()
-        self.threadpool = QThreadPool()
 
     @staticmethod
     def _validate_inn(inn: str) -> bool:
@@ -45,21 +42,6 @@ class AddOrgWidget(QWidget):
         self.add_org_button.clicked.connect(self.add_org)
         self.layout.addWidget(self.add_org_button)
 
-    def _on_update_finished(self) -> None:
-        QMessageBox.information(
-            self,
-            MainText.success_title,
-            Text.org_added)
-        self.org_added.emit(
-            {
-                Const.org_name_index: self.org_name_edit.text(),
-                Const.org_inn_index: self.inn_edit.text()
-            }
-        )
-
-    def _on_update_error(self, message: str) -> None:
-        QMessageBox.warning(self, MainText.error_title, message)
-
     def add_org(self) -> None:
         org_name = self.org_name_edit.text()
         org_inn = self.inn_edit.text()
@@ -77,7 +59,4 @@ class AddOrgWidget(QWidget):
                 MainText.inn_validation_error)
             return
 
-        thread = AddOrgThread(org_inn, org_name)
-        thread.signals.finished.connect(self._on_update_finished)
-        thread.signals.error_popup.connect(lambda error: self._on_update_error(error))
-        self.threadpool.start(thread)
+        thread_manager.run_add_org_thread(org_name=org_name, org_inn=org_inn)

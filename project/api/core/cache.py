@@ -17,7 +17,7 @@ class ApiCache:
 
     def get_cached_keys(self, org_inn: str) -> List[Optional[Key]]:
         if self.key_cache:
-            org_keys_cache = self.key_cache.get(org_inn, None)
+            org_keys_cache = self.key_cache.GET(org_inn, None)
             if org_keys_cache and datetime.now() - org_keys_cache[1] < timedelta(minutes=15):
                 return org_keys_cache[0]
 

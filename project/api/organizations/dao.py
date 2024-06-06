@@ -34,7 +34,7 @@ class OrganizationsDAO:
         else:
             return result
 
-    async def get_org_list(self, db: AsyncSession) -> Sequence[Optional[Organization]]:
+    async def get_orgs_list(self, db: AsyncSession) -> Sequence[Optional[Organization]]:
         try:
             result = await db.execute(select(Organization).options(joinedload(Organization.keys)))
             organizations = result.scalars().unique().all()

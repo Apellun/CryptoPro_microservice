@@ -1,6 +1,6 @@
 class Const:
-    main_window_min_height = 600
-    main_window_geometry = (100, 100, 600, 400)
+    MAIN_WINDOW_HEIGHT = 600
+    MAIN_WINDOW_GEOMETRY = (100, 100, 600, 400)
 
     org_list_margins = (0, 0, 0, 0)
     org_list_layout_spacing = 10
@@ -11,11 +11,10 @@ class Const:
     org_list_buttons_edit_index = 1
     org_list_buttons_delete_index = 0
 
-    browse_keys_spacing = 15
-    browse_keys_margins = (0, 0, 0, 0)
-    browse_keys_key_layout_stretch = 1
-    browse_keys_key_widget_label_index = 1
-    browse_keys_key_widget_checkbox_index = 0
+    BROWSE_KEYS_SPACING = 15
+    BROWSE_KEYS_MARGINS = (0, 0, 0, 0)
+    BROWSE_KEYS_KEY_LAYOUT_STRETCH = 1
+
     checked_checkbox_state = 2
     unchecked_checkbox_state = 0
 
@@ -31,21 +30,18 @@ class Const:
     host_index = "host"
     port_index = "port"
 
-    api_host = "localhost"
-    api_port = 9080
 
-
-class HTTPMethodsStr:
-    get = "GET"
-    post = "POST"
-    put = "PUT"
-    patch = "PATCH"
-    delete = "DELETE"
+class HTTPMethods:
+    GET = "GET"
+    POST = "POST"
+    PUT = "PUT"
+    PATCH = "PATCH"
+    DELETE = "DELETE"
 
 
 class APIEndpoints:
-    organizations_endpoint = "organizations"
-    server_settings_endpoint = "server_settings"
+    ORGANIZATIONS_ENDPOINT = "organizations"
+    SERVER_SETTINGS_ENDPOINT = "server_settings"
 
     @staticmethod
     def get_org_edit_endpoint(org_inn: str) -> str:

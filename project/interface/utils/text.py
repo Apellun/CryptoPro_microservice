@@ -7,6 +7,7 @@ class MainText:
     success_title = "Успешно"
     success_message = "Настройки успешно изменены."
     error_title = "Ошибка"
+    error_message = "Неизвестная ошибка"
     in_progress = "Сохраняем настройки..."
     process_finished = "Настройки успешно сохранены"
     confirm_action = "Подтвердите действие"

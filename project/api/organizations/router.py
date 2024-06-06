@@ -13,7 +13,7 @@ organizations_router = APIRouter()
 
 @organizations_router.get('/', status_code=200, response_model=List[Optional[OrganizationRead]])
 async def get_org_list(db: AsyncSession = Depends(get_db)):
-    result = await organizations_services.get_org_list(db=db)
+    result = await organizations_services.get_orgs_list(db=db)
     return result
 
 

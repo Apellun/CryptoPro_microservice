@@ -7,11 +7,11 @@ from project.interface.utils.text import MainText
 
 
 class InfoPopup(QDialog):
-    def __init__(self, text=None, parent=None):
+    def __init__(self, parent):
         super().__init__(parent)
 
         self.layout = QVBoxLayout(self)
-        self.message_label = QLabel(text)
+        self.message_label = QLabel()
         self.layout.addWidget(self.message_label)
 
         self.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint, True)

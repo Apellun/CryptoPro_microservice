@@ -9,7 +9,7 @@ organization_key_table = Table(
     "organization_key",
     Base.metadata,
     Column("organization_id", ForeignKey("organization.id"), primary_key=True),
-    Column("key_id", ForeignKey("key.id", ondelete='CASCADE'), primary_key=True),
+    Column("key_id", ForeignKey("key.id"), primary_key=True),
 )
 
 

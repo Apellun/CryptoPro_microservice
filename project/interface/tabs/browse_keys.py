@@ -61,7 +61,7 @@ class BrowseKeysTab(QWidget):
             if state == Const.checked_checkbox_state:
                 key_exists = self._checked_keys.get(key.Thumbprint, None)
                 if not key_exists:
-                    self._checked_keys[key.Thumbprint] = str(key)
+                    self._checked_keys[key.Thumbprint] = key
                 try:
                     del self._unchecked_keys[key.Thumbprint]
                 except KeyError:
@@ -70,7 +70,7 @@ class BrowseKeysTab(QWidget):
             elif state == Const.unchecked_checkbox_state:
                 key_exists = self._unchecked_keys.get(key.Thumbprint, None)
                 if not key_exists:
-                    self._unchecked_keys[key.Thumbprint] = str(key)
+                    self._unchecked_keys[key.Thumbprint] = key
                     try:
                         del self._checked_keys[key.Thumbprint]
                     except KeyError:

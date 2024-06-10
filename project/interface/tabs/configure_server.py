@@ -32,7 +32,7 @@ class ConfigureServerTab(QWidget):
 
         self.threadpool = QThreadPool()
 
-    def update_server_settings(self) -> None: #TODO: add progress popup
+    def update_server_settings(self) -> None:
         host = self.host_edit.text()
         port = self.port_edit.text()
 

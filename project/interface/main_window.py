@@ -17,8 +17,6 @@ class MainWindow(QWidget):
 
         self._init_ui()
         self._add_tabs()
-        self.progress_dialog = ProgressDialog(self)
-        thread_manager.set_progress_dialog(self.progress_dialog)
 
         self._connect_signals()
 

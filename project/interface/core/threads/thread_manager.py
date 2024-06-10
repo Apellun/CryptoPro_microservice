@@ -1,7 +1,8 @@
 from typing import List
 from PySide6.QtCore import QThreadPool, Signal, QObject
-from PySide6.QtWidgets import QWidget, QDialog
+from PySide6.QtWidgets import QWidget, QMessageBox
 from project.interface.core.threads import threads
+from project.interface.utils.text import MainText
 
 
 class ThreadManager(QObject):
@@ -14,7 +15,10 @@ class ThreadManager(QObject):
         super().__init__()
 
         self.threadpool = QThreadPool()
-        self.progress_dialog = None
+
+        self.infobox = None
+        self.successbox = None
+        self.errorbox = None
 
         self.add_org_inn = None
         self.add_org_name = None
@@ -27,12 +31,37 @@ class ThreadManager(QObject):
         self.delete_org_inn = None
         self.delete_org_widget = None
 
-    def set_progress_dialog(self, progress_dialog: QDialog) -> None:
-        self.progress_dialog = progress_dialog
+    def _display_infobox(
+            self, title: str = MainText.in_progress_title,
+            message: str = MainText.in_progress_message
+    ) -> None:
+        self.infobox = QMessageBox()
+        self.infobox.setWindowTitle(title)
+        self.infobox.setStandardButtons(QMessageBox.NoButton)
+        self.infobox.setText(message)
+        self.infobox.exec()
+
+    def _display_successbox(
+            self, title: str = MainText.success_title,
+            message: str = MainText.success_message):
+        self.infobox.accept()
+        self.successbox = QMessageBox()
+        self.successbox.setWindowTitle(title)
+        self.successbox.setText(message)
+        self.successbox.exec()
+
+    def _display_errorbox(
+            self, error_str: str, title: str = MainText.error_title
+    ) -> None:
+        self.infobox.accept()
+        self.errorbox = QMessageBox()
+        self.errorbox.setWindowTitle(title)
+        self.errorbox.setText(error_str)
+        self.errorbox.exec()
 
     def _on_org_added(self) -> None:
         self.org_added.emit(self.add_org_name, self.add_org_inn)
-        self.progress_dialog.show_finished_popup()
+        self._display_successbox()
 
     def run_add_org_thread(self, org_inn: str, org_name: str) -> None:
         self.add_org_name = org_name
@@ -40,17 +69,17 @@ class ThreadManager(QObject):
 
         thread = threads.AddOrgThread(org_inn, org_name)
         thread.signals.finished.connect(self._on_org_added)
-        thread.signals.error.connect(self.progress_dialog.show_error_popup)
+        thread.signals.error.connect(self._display_errorbox)
 
         self.threadpool.start(thread)
-        self.progress_dialog.show_progress_popup()
+        self._display_infobox()
 
     def _on_org_updated(self) -> None:
         self.org_updated.emit(
             self.update_org_old_inn, self.update_org_inn,
             self.update_org_name, self.update_org_widget
         )
-        self.progress_dialog.show_finished_popup()
+        self._display_successbox()
 
     def run_update_org_thread(
             self, old_inn: str, org_inn: str, org_name: str, org_widget: QWidget
@@ -66,12 +95,14 @@ class ThreadManager(QObject):
             new_name=org_name
         )
         thread.signals.finished.connect(self._on_org_updated)
+        thread.signals.error.connect(self._display_errorbox)
+
         self.threadpool.start(thread)
-        self.progress_dialog.show_progress_popup()
+        self._display_infobox()
 
     def _on_org_deleted(self):
         self.org_deleted.emit(self.delete_org_inn, self.delete_org_widget)
-        self.progress_dialog.show_finished_popup()
+        self._display_successbox()
 
     def run_delete_org_thread(self, org_inn: str, org_widget: QWidget) -> None:
         self.delete_org_inn = org_inn
@@ -80,23 +111,26 @@ class ThreadManager(QObject):
         thread = threads.DeleteOrgThread(org_inn)
 
         thread.signals.finished.connect(self._on_org_deleted)
+        thread.signals.error.connect(self._display_errorbox)
+
         self.threadpool.start(thread)
-        self.progress_dialog.show_progress_popup()
+        self._display_infobox()
 
     def _on_org_keys_updated(self):
         self.org_keys_updated.emit()
-        self.progress_dialog.show_finished_popup()
+        self._display_successbox()
 
     def run_update_org_keys_thread(
             self, org_inn: str, new_keys: List[str]) -> None:
         thread = threads.UpdateOrgKeysThread(org_inn, new_keys)
         thread.signals.finished.connect(self._on_org_keys_updated)
+        thread.signals.error.connect(self._display_errorbox)
 
         self.threadpool.start(thread)
-        self.progress_dialog.show_progress_popup()
+        self._display_infobox()
 
     def _on_server_settings_updated(self):
-        self.progress_dialog.show_finished_popup()
+        self._display_successbox()
 
     def run_update_server_settings_thread(
             self, host: str, port: str) -> None:
@@ -105,8 +139,10 @@ class ThreadManager(QObject):
             port=port
         )
         thread.signals.finished.connect(self._on_server_settings_updated)
+        thread.signals.error.connect(self._display_errorbox)
+
         self.threadpool.start(thread)
-        self.progress_dialog.show_progress_popup()
+        self._display_infobox()
 
 
 thread_manager = ThreadManager()

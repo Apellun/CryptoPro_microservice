@@ -14,7 +14,7 @@ class ProgressDialog(InfoPopup):
         self.close()
         QMessageBox.information(self, title, message)
 
-    def show_progress_popup(self, message: str = MainText.in_progress) -> None:
+    def show_progress_popup(self, message: str = "") -> None:
         self.set_text(message)
         self.show()
 

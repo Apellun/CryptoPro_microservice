@@ -95,7 +95,7 @@ class ApiManager:
             method=HTTPMethods.PUT
         )
 
-    def update_org_keys(self, org_inn: str, new_keys: List[Optional[object]] = None)\
+    def update_org_keys(self, org_inn: str, new_keys: List[Optional[str]] = None)\
             -> requests.Response:
         return self._send_request(
             request_body={

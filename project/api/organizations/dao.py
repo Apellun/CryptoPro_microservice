@@ -56,7 +56,7 @@ class OrganizationsDAO:
             await db.flush()
             await db.commit()
 
-        except SQLAlchemyError as e:
+        except SQLAlchemyError as e: #TODO
             await db.rollback()
             if isinstance(e, IntegrityError):
                 original_exception = e.orig
@@ -108,25 +108,34 @@ class OrganizationsDAO:
             await db.rollback()
             raise exceptions.DatabaseError(details=str(e))
 
-    async def update_org_keys(self, org_inn: str, new_org_keys: List[str], db: AsyncSession) -> Organization:
-        new_org_keys = new_org_keys.keys
+    async def update_org_keys(
+            self, org_inn: str, new_org_thumbprints: List[str], db: AsyncSession
+    ) -> Organization: #TODO: return here and see if i can load the keys orgs already joined
+        new_org_thumbprints = new_org_thumbprints.keys
         org = await self.get_org(org_inn, db)
         org_keys = org.keys
 
-        existing_org_thumbprints = [key.thumbprint for key in org_keys]
-        existing_keys = await keys_dao.get_all_keys(db)
+        old_org_thumbprints = [key.thumbprint for key in org_keys]
+
+        thumbprints_to_add_to_org = setdiff1d(new_org_thumbprints, old_org_thumbprints)
+        thumbprints_to_delete = setdiff1d(old_org_thumbprints, new_org_thumbprints)
+        to_delete_ids = [key.id for key in org_keys if key.thumbprint in thumbprints_to_delete]
+
+        existing_keys = await keys_dao.get_keys_by_thumbprints(thumbprints_to_add_to_org, db)
         existing_keys_thumbprints = [key.thumbprint for key in existing_keys]
 
-        thumbprints_to_add_to_db = setdiff1d(new_org_keys, existing_keys_thumbprints)
-        thumbprints_to_add_to_org = setdiff1d(new_org_keys, existing_org_thumbprints)
-        thumbprints_to_delete = setdiff1d(existing_org_thumbprints, new_org_keys)
+        thumbprints_to_add_to_db = setdiff1d(thumbprints_to_add_to_org, existing_keys_thumbprints)
 
         if len(thumbprints_to_add_to_db) > 0:
             await keys_dao.add_keys(thumbprints_to_add_to_db, db)
         if len(thumbprints_to_add_to_org) > 0:
             await self.add_org_keys(org.id, thumbprints_to_add_to_org, db)
+
         if len(thumbprints_to_delete) > 0:
-            await keys_dao.delete_keys(thumbprints_to_delete, db)
+            await keys_dao.untie_org_keys(org.id, to_delete_ids, db)
+            keys_to_delete_from_db = await keys_dao.get_keys_orgs(to_delete_ids, db)
+            if keys_to_delete_from_db:
+                await keys_dao.delete_keys_objects(keys_to_delete_from_db, db)
 
         await db.refresh(org)
 
